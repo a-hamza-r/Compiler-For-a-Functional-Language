@@ -1,1 +1,1 @@
-# lexer_parser_for_c
+# A compiler for a functional language from scratch (in progress)
