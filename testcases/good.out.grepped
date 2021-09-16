@@ -1,0 +1,14 @@
+Running testcases/good/eval_arith_nested
+Running testcases/good/eval_arith_nested_with_if
+Running testcases/good/eval_arith_nested_with_let_and_if
+Running testcases/good/eval_boolvar_getint
+Running testcases/good/eval_get_int
+Running testcases/good/eval_if_containing_only_flas
+Running testcases/good/eval_if_with_arithm_and_let_nested
+Running testcases/good/eval_if_with_arithm_and_let_nested1
+Running testcases/good/eval_multiply_num_var
+Running testcases/good/eval_num
+Running testcases/good/eval_plus_nums
+Running testcases/good/eval_var
+Running testcases/good/eval_var1
+Running testcases/good/eval_var2
