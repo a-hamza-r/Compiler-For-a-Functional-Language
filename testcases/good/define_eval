@@ -1,0 +1,2 @@
+(define-fun (varfun (int var) (int var2) (int var3)) bool (+ 1 2))
+(eval (varfun (+ 1 2 var) (- var1 var2) (* 1 (+ var 2 4) var)))

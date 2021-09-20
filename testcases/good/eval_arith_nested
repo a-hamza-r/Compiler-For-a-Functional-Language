@@ -1,1 +1,1 @@
-(eval (- (+ var var2) var1))
+(eval (- (+ var var2 var2) var1))

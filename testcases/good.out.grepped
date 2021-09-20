@@ -1,3 +1,5 @@
+Running testcases/good/define_eval
+syntax error
 Running testcases/good/eval_arith_nested
 Running testcases/good/eval_arith_nested_with_if
 Running testcases/good/eval_arith_nested_with_let_and_if
