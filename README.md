@@ -1,1 +1,4 @@
 # A compiler for a functional language from scratch (in progress)
+
+This repository develops a compiler for a functional programming language (like scheme) from scratch. The language has the prefix notation for the instructions and is very similar to SMT-Lib. The compiler will be built in 5 steps and the description will be updated as the work is done. For each step, a separate branch will show the progress till that point in the work (move to the specific branch for details). Currently, these steps are already done: 
+- Built a lexer and parser using lex and yacc. Testcases are added and work fine.
