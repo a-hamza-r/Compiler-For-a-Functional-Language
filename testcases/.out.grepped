@@ -1,0 +1,10 @@
+Running testcases//bad
+Running testcases//bad.out
+syntax error
+Running testcases//bad.out.grepped
+syntax error
+Running testcases//good
+Running testcases//good.out
+syntax error
+Running testcases//good.out.grepped
+syntax error

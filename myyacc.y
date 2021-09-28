@@ -22,7 +22,7 @@ typedef unsigned int u_int;
 
 %start prog
 %token CONST IDENTIFIER EVAL LPAR RPAR AROP AROPMUL GETINT GETBOOL TRUE FALSE IF LET LGOP CMOP NOT DEFFUN INT BOOL
-%type<str> CONST AROP AROPMUL expr IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET fla var term EVAL LGOP CMOP NOT DEFFUN fun type INT BOOL funcall funcdecl
+%type<str> CONST AROP AROPMUL expr IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET fla id term EVAL LGOP CMOP NOT DEFFUN type INT BOOL funcall funcdecl
 %type<lst> multiplefla multipleterm args exprfun
 
 
@@ -31,12 +31,12 @@ typedef unsigned int u_int;
 prog : funcdecl prog
 	| LPAR EVAL expr RPAR {
 		char *cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+10);
 		printf("%s %s", $2, $3); 
 		free(cur);
 	}
 ;
-funcdecl : LPAR DEFFUN LPAR fun args RPAR type expr RPAR {
+funcdecl : LPAR DEFFUN LPAR id args RPAR type expr RPAR {
 		struct Node *tmp = $5;
 		u_int size = 0;
 		while (tmp != NULL)
@@ -45,7 +45,7 @@ funcdecl : LPAR DEFFUN LPAR fun args RPAR type expr RPAR {
 			tmp = tmp->next;
 		}
 		char *cur;
-		cur = (char *)malloc(size+100);
+		cur = (char *)malloc(size+10);
 		strcat(cur, "(");
 		tmp = $5;
 		while (tmp != NULL && tmp->next != NULL)
@@ -57,12 +57,13 @@ funcdecl : LPAR DEFFUN LPAR fun args RPAR type expr RPAR {
 		strcat(cur, ")");
 		printf("%s %s %s : %s", $7, $4, cur, $8);
 		free(cur);
+		free(tmp);
 	}
 ;
-args : /* empty */ { $$ = NULL; }
-	| LPAR type var RPAR args {
+args :  { $$ = NULL; }
+	| LPAR type id RPAR args {
 		char *cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+10);
 		sprintf(cur, "%s %s", $2, $3);
 		struct Node *ret = (struct Node *)malloc(sizeof(struct Node));
 		ret->tok = strdup(cur);
@@ -72,12 +73,12 @@ args : /* empty */ { $$ = NULL; }
 	}
 ;
 type : INT | BOOL 		{ $$ = strdup($1); };
-fun : IDENTIFIER		{ $$ = strdup($1); }; 
+id : IDENTIFIER			{ $$ = strdup($1); }; 
 expr : term | fla		{ $$ = strdup($1); }
-	| funcall		{ $$ = strdup($1); }
 ;
-fla : TRUE | FALSE | var	{ $$ = strdup($1); }
+fla : TRUE | FALSE | id	{ $$ = strdup($1); }
 	| LPAR GETBOOL RPAR	{ $$ = strdup($2); }
+	| funcall		{ $$ = strdup($1); }
 	| LPAR LGOP fla multiplefla RPAR	{
 		char* cur;
 		struct Node *tmp = $4;
@@ -87,7 +88,7 @@ fla : TRUE | FALSE | var	{ $$ = strdup($1); }
 			size += strlen(tmp->tok)+strlen($2);
 			tmp = tmp->next;
 		}
-		cur = (char *)malloc(size+strlen($3)+100);
+		cur = (char *)malloc(size+strlen($3)+10);
 		sprintf(cur, "(%s", $3);
 		tmp = $4;
 		while (tmp->next != NULL)
@@ -101,28 +102,28 @@ fla : TRUE | FALSE | var	{ $$ = strdup($1); }
 	}
 	| LPAR CMOP term term RPAR	{ 
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
 		sprintf(cur, "(%s %s %s)", $3, $2, $4);
 		$$ = strdup(cur);
 		free(cur);
 	}
 	| LPAR NOT fla RPAR	{
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+10);
 		sprintf(cur, "(%s %s)", $2, $3);
 		$$ = strdup(cur);
 		free(cur);
 	}
 	| LPAR IF fla fla fla RPAR {
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+10);
 		sprintf(cur, "(%s %s %s else %s)", $2, $3, $4, $5);
 		$$ = strdup(cur);
 		free(cur);
 	}
-	| LPAR LET LPAR var expr RPAR fla RPAR {
+	| LPAR LET LPAR id expr RPAR fla RPAR {
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+100);
+		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+10);
 		sprintf(cur, "(%s (%s = %s, %s))", $2, $4, $5, $7);
 		$$ = strdup(cur);
 		free(cur);
@@ -141,7 +142,7 @@ multiplefla : fla multiplefla 	{
 		$$ = n; 
 	}
 ;
-funcall : LPAR fun exprfun RPAR {
+funcall : LPAR id exprfun RPAR {
 		char* cur;
 		u_int size = 0;
 		struct Node *tmp = $3;
@@ -150,7 +151,7 @@ funcall : LPAR fun exprfun RPAR {
 			size += strlen(tmp->tok)+2;
 			tmp = tmp->next;
 		}
-		cur = (char *)malloc(size+100);
+		cur = (char *)malloc(size+10);
 		strcat(cur, "(");
 		tmp = $3;
 		while (tmp != NULL && tmp->next != NULL)
@@ -158,14 +159,15 @@ funcall : LPAR fun exprfun RPAR {
 			sprintf(cur, "%s%s, ", cur, tmp->tok);
 			tmp = tmp->next;
 		}
-		if (tmp != NULL) sprintf(cur, "%s%s)", cur, tmp->tok);
-		char *ret = (char *)malloc(size+strlen($2)+100);
+		if (tmp != NULL) sprintf(cur, "%s%s", cur, tmp->tok);
+		strcat(cur, ")");
+		char *ret = (char *)malloc(size+strlen($2)+10);
 		sprintf(ret, "(%s %s)", $2, cur);
 		$$ = strdup(ret);
-		free(cur); free(ret);
+		free(cur); free(ret); free(tmp);
 	}
 ;
-exprfun : /* empty */ { $$ = NULL; }
+exprfun : { $$ = NULL; }
 	| expr exprfun {
 		struct Node *ret = (struct Node *)malloc(sizeof(struct Node));
 		ret->tok = $1;
@@ -173,18 +175,18 @@ exprfun : /* empty */ { $$ = NULL; }
 		$$ = ret;
 	}
 ;
-var : IDENTIFIER		{ $$ = strdup($1); };
-term : CONST | var		{ $$ = strdup($1); }
+term : CONST | id		{ $$ = strdup($1); }
 	| LPAR GETINT RPAR	{
 		char *cur;
-		cur = (char *)malloc(strlen($2)+100);
+		cur = (char *)malloc(strlen($2)+10);
 		sprintf(cur, "(%s)", $2);
 		$$ = strdup(cur); 
 		free(cur);
 	}
+	| funcall		{ $$ = strdup($1); }
 	| LPAR AROP term term RPAR { 
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
 		sprintf(cur, "(%s %s %s)", $3, $2, $4);
 		$$ = strdup(cur);
 		free(cur);
@@ -198,7 +200,7 @@ term : CONST | var		{ $$ = strdup($1); }
 			size += strlen(tmp->tok)+strlen($2);
 			tmp = tmp->next;
 		}
-		cur = (char *)malloc(size+strlen($3)+100);
+		cur = (char *)malloc(size+strlen($3)+10);
 		sprintf(cur, "(%s", $3);
 		tmp = $4;
 		while (tmp->next != NULL)
@@ -212,14 +214,14 @@ term : CONST | var		{ $$ = strdup($1); }
 	}
 	| LPAR IF fla term term RPAR {
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+100);
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+10);
 		sprintf(cur, "(%s %s %s else %s)", $2, $3, $4, $5);
 		$$ = strdup(cur);
 		free(cur);
 	}
-	| LPAR LET LPAR var expr RPAR term RPAR {
+	| LPAR LET LPAR id expr RPAR term RPAR {
 		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+100);
+		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+10);
 		sprintf(cur, "(%s (%s = %s, %s))", $2, $4, $5, $7);
 		$$ = strdup(cur);
 		free(cur);
