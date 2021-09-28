@@ -12,6 +12,8 @@ struct Node {
 };
 typedef unsigned int u_int;
 
+char *opsWithMultipleArgs(char *, char *, char *, struct Node *, char *);
+
 %}
 
 %union {
@@ -56,8 +58,7 @@ funcdecl : LPAR DEFFUN LPAR id args RPAR type expr RPAR {
 		if (tmp != NULL) sprintf(cur, "%s%s", cur, tmp->tok);
 		strcat(cur, ")");
 		printf("%s %s %s : %s", $7, $4, cur, $8);
-		free(cur);
-		free(tmp);
+		free(cur); free(tmp);
 	}
 ;
 args :  { $$ = NULL; }
@@ -72,33 +73,21 @@ args :  { $$ = NULL; }
 		free(cur);
 	}
 ;
-type : INT | BOOL 		{ $$ = strdup($1); };
-id : IDENTIFIER			{ $$ = strdup($1); }; 
-expr : term | fla		{ $$ = strdup($1); }
+type : INT { $$ = strdup($1); } | BOOL { $$ = strdup($1); }
 ;
-fla : TRUE | FALSE | id	{ $$ = strdup($1); }
+id : IDENTIFIER	{ $$ = strdup($1); }
+; 
+expr : term { $$ = strdup($1); } | fla { $$ = strdup($1); }
+;
+fla : TRUE { $$ = strdup($1); } | FALSE { $$ = strdup($1); }
+	| id { $$ = strdup($1); }
 	| LPAR GETBOOL RPAR	{ $$ = strdup($2); }
-	| funcall		{ $$ = strdup($1); }
-	| LPAR LGOP fla multiplefla RPAR	{
-		char* cur;
-		struct Node *tmp = $4;
-		u_int size = 0;
-		while (tmp != NULL) 
-		{
-			size += strlen(tmp->tok)+strlen($2);
-			tmp = tmp->next;
-		}
-		cur = (char *)malloc(size+strlen($3)+10);
-		sprintf(cur, "(%s", $3);
-		tmp = $4;
-		while (tmp->next != NULL)
-		{
-			sprintf(cur, "%s %s %s", cur, $2, tmp->tok);
-			tmp = tmp->next;
-		}
-		sprintf(cur, "%s %s %s)", cur, $2, tmp->tok);
-		$$ = strdup(cur);
-		free(tmp); free(cur);
+	| funcall { $$ = strdup($1); }
+	| LPAR LGOP fla fla multiplefla RPAR	{
+		char *parsed;
+		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
+		$$ = strdup(parsed);
+		free(parsed);
 	}
 	| LPAR CMOP term term RPAR	{ 
 		char* cur;
@@ -129,18 +118,13 @@ fla : TRUE | FALSE | id	{ $$ = strdup($1); }
 		free(cur);
 	}
 ;
-multiplefla : fla multiplefla 	{
+multiplefla : fla multiplefla {
 		struct Node *n = (struct Node *)malloc(sizeof(struct Node));
 		n->tok = strdup($1);
 		n->next = $2;
 		$$ = n;
 	}
-	| fla		{ 
-		struct Node *n = (struct Node *)malloc(sizeof(struct Node));		
-		n->tok = strdup($1);
-		n->next = NULL;
-		$$ = n; 
-	}
+	| { $$ = NULL; }
 ;
 funcall : LPAR id exprfun RPAR {
 		char* cur;
@@ -175,7 +159,7 @@ exprfun : { $$ = NULL; }
 		$$ = ret;
 	}
 ;
-term : CONST | id		{ $$ = strdup($1); }
+term : CONST { $$ = strdup($1); } | id { $$ = strdup($1); }
 	| LPAR GETINT RPAR	{
 		char *cur;
 		cur = (char *)malloc(strlen($2)+10);
@@ -183,7 +167,7 @@ term : CONST | id		{ $$ = strdup($1); }
 		$$ = strdup(cur); 
 		free(cur);
 	}
-	| funcall		{ $$ = strdup($1); }
+	| funcall { $$ = strdup($1); }
 	| LPAR AROP term term RPAR { 
 		char* cur;
 		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
@@ -191,26 +175,11 @@ term : CONST | id		{ $$ = strdup($1); }
 		$$ = strdup(cur);
 		free(cur);
 	}
-	| LPAR AROPMUL term multipleterm RPAR	{
-		char* cur;
-		struct Node *tmp = $4;
-		u_int size = 0;
-		while (tmp != NULL) 
-		{
-			size += strlen(tmp->tok)+strlen($2);
-			tmp = tmp->next;
-		}
-		cur = (char *)malloc(size+strlen($3)+10);
-		sprintf(cur, "(%s", $3);
-		tmp = $4;
-		while (tmp->next != NULL)
-		{
-			sprintf(cur, "%s %s %s", cur, $2, tmp->tok);
-			tmp = tmp->next;
-		}
-		sprintf(cur, "%s %s %s)", cur, $2, tmp->tok);
-		$$ = strdup(cur);
-		free(tmp); free(cur);
+	| LPAR AROPMUL term term multipleterm RPAR	{
+		char *parsed;
+		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
+		$$ = strdup(parsed);
+		free(parsed);
 	}
 	| LPAR IF fla term term RPAR {
 		char* cur;
@@ -233,17 +202,35 @@ multipleterm : term multipleterm {
 		n->next = $2;
 		$$ = n;
 	}
-	| term	{ 
-		struct Node *n = (struct Node *)malloc(sizeof(struct Node));		
-		n->tok = strdup($1);
-		n->next = NULL;
-		$$ = n; 
-	}
+	| { $$ = NULL; }
 ;
 
 %% 
 
 void yyerror (char *s) {fprintf(stderr, "%s\n", s);}
+
+char *opsWithMultipleArgs(char *op, char *arg1, char *arg2, struct Node *args, char *parsed)
+{	
+	struct Node *tmp = args;
+	u_int size = 0;
+	while (tmp != NULL) 
+	{
+		size += strlen(tmp->tok)+strlen(op)+1;
+		tmp = tmp->next;
+	}
+	parsed = (char *)malloc(size+strlen(arg1)+strlen(arg2)+strlen(op)+10);
+	sprintf(parsed, "(%s %s %s", arg1, op, arg2);
+	tmp = args;
+	while (tmp != NULL && tmp->next != NULL)
+	{
+		sprintf(parsed, "%s %s %s", parsed, op, tmp->tok);
+		tmp = tmp->next;
+	}
+	if (tmp != NULL) sprintf(parsed, "%s %s %s", parsed, op, tmp->tok);
+	strcat(parsed, ")");
+	free(tmp);
+	return parsed;
+}
 
 int main() {
 	yyparse();
