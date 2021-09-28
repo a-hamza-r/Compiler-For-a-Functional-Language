@@ -1,8 +1,10 @@
 Running testcases/good/define_eval
+Running testcases/good/define_eval_if_getint
 Running testcases/good/eval_arith_nested
 Running testcases/good/eval_arith_nested_with_if
 Running testcases/good/eval_arith_nested_with_let_and_if
 Running testcases/good/eval_boolvar_getint
+Running testcases/good/eval_fun_no_args
 Running testcases/good/eval_get_int
 Running testcases/good/eval_if_containing_only_flas
 Running testcases/good/eval_if_with_arithm_and_let_nested
