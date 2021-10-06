@@ -1,5 +1,8 @@
 *.pdf
 *.png
 *.out
-*.c
-*.h
+y.tab.c
+y.tab.h
+lex.yy.c
+comp
+*.dot

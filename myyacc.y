@@ -24,8 +24,8 @@ char *opsWithMultipleArgs(char *, char *, char *, struct Node *, char *);
 
 %start prog
 %token CONST IDENTIFIER EVAL LPAR RPAR AROP AROPMUL GETINT GETBOOL TRUE FALSE IF LET LGOP CMOP NOT DEFFUN INT BOOL
-%type<str> CONST AROP AROPMUL expr IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET fla id term EVAL LGOP CMOP NOT DEFFUN type INT BOOL funcall funcdecl
-%type<lst> multiplefla multipleterm args exprfun
+%type<str> CONST AROP AROPMUL expr IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL LGOP CMOP NOT DEFFUN type INT BOOL funcall funcdecl
+%type<lst> multipleexpr args exprfun
 
 
 %% 
@@ -38,7 +38,7 @@ prog : funcdecl prog
 		free(cur);
 	}
 ;
-funcdecl : LPAR DEFFUN LPAR id args RPAR type expr RPAR {
+funcdecl : LPAR DEFFUN LPAR IDENTIFIER args RPAR type expr RPAR {
 		struct Node *tmp = $5;
 		u_int size = 0;
 		while (tmp != NULL)
@@ -62,7 +62,7 @@ funcdecl : LPAR DEFFUN LPAR id args RPAR type expr RPAR {
 	}
 ;
 args :  { $$ = NULL; }
-	| LPAR type id RPAR args {
+	| LPAR type IDENTIFIER RPAR args {
 		char *cur;
 		cur = (char *)malloc(strlen($2)+strlen($3)+10);
 		sprintf(cur, "%s %s", $2, $3);
@@ -75,50 +75,66 @@ args :  { $$ = NULL; }
 ;
 type : INT { $$ = strdup($1); } | BOOL { $$ = strdup($1); }
 ;
-id : IDENTIFIER	{ $$ = strdup($1); }
-; 
-expr : term { $$ = strdup($1); } | fla { $$ = strdup($1); }
-;
-fla : TRUE { $$ = strdup($1); } | FALSE { $$ = strdup($1); }
-	| id { $$ = strdup($1); }
-	| LPAR GETBOOL RPAR	{ $$ = strdup($2); }
+expr : CONST { $$ = strdup($1); } | IDENTIFIER { $$ = strdup($1); }
+  | TRUE { $$ = strdup($1); } | FALSE { $$ = strdup($1); }
 	| funcall { $$ = strdup($1); }
-	| LPAR LGOP fla fla multiplefla RPAR	{
-		char *parsed;
-		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
-		$$ = strdup(parsed);
-		free(parsed);
-	}
-	| LPAR CMOP term term RPAR	{ 
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
-		sprintf(cur, "(%s %s %s)", $3, $2, $4);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR NOT fla RPAR	{
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+10);
-		sprintf(cur, "(%s %s)", $2, $3);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR IF fla fla fla RPAR {
+	| LPAR IF expr expr expr RPAR {
 		char* cur;
 		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+10);
 		sprintf(cur, "(%s %s %s else %s)", $2, $3, $4, $5);
 		$$ = strdup(cur);
 		free(cur);
 	}
-	| LPAR LET LPAR id expr RPAR fla RPAR {
+	| LPAR LET LPAR IDENTIFIER expr RPAR expr RPAR {
 		char* cur;
 		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+10);
 		sprintf(cur, "(%s (%s = %s, %s))", $2, $4, $5, $7);
 		$$ = strdup(cur);
 		free(cur);
 	}
+	| LPAR GETBOOL RPAR	{ $$ = strdup($2); }
+	| LPAR LGOP expr expr multipleexpr RPAR	{
+		char *parsed;
+		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
+		$$ = strdup(parsed);
+		free(parsed);
+	}
+	| LPAR CMOP expr expr RPAR	{ 
+		char* cur;
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
+		sprintf(cur, "(%s %s %s)", $3, $2, $4);
+		$$ = strdup(cur);
+		free(cur);
+	}
+	| LPAR NOT expr RPAR	{
+		char* cur;
+		cur = (char *)malloc(strlen($2)+strlen($3)+10);
+		sprintf(cur, "(%s %s)", $2, $3);
+		$$ = strdup(cur);
+		free(cur);
+	}
+	| LPAR GETINT RPAR	{
+		char *cur;
+		cur = (char *)malloc(strlen($2)+10);
+		sprintf(cur, "(%s)", $2);
+		$$ = strdup(cur); 
+		free(cur);
+	}
+	| LPAR AROP expr expr RPAR { 
+		char* cur;
+		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
+		sprintf(cur, "(%s %s %s)", $3, $2, $4);
+		$$ = strdup(cur);
+		free(cur);
+	}
+	| LPAR AROPMUL expr expr multipleexpr RPAR	{
+		char *parsed;
+		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
+		$$ = strdup(parsed);
+		free(parsed);
+	}
 ;
-multiplefla : fla multiplefla {
+multipleexpr : expr multipleexpr {
 		struct Node *n = (struct Node *)malloc(sizeof(struct Node));
 		n->tok = strdup($1);
 		n->next = $2;
@@ -126,7 +142,7 @@ multiplefla : fla multiplefla {
 	}
 	| { $$ = NULL; }
 ;
-funcall : LPAR id exprfun RPAR {
+funcall : LPAR IDENTIFIER exprfun RPAR {
 		char* cur;
 		u_int size = 0;
 		struct Node *tmp = $3;
@@ -159,51 +175,6 @@ exprfun : { $$ = NULL; }
 		$$ = ret;
 	}
 ;
-term : CONST { $$ = strdup($1); } | id { $$ = strdup($1); }
-	| LPAR GETINT RPAR	{
-		char *cur;
-		cur = (char *)malloc(strlen($2)+10);
-		sprintf(cur, "(%s)", $2);
-		$$ = strdup(cur); 
-		free(cur);
-	}
-	| funcall { $$ = strdup($1); }
-	| LPAR AROP term term RPAR { 
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
-		sprintf(cur, "(%s %s %s)", $3, $2, $4);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR AROPMUL term term multipleterm RPAR	{
-		char *parsed;
-		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
-		$$ = strdup(parsed);
-		free(parsed);
-	}
-	| LPAR IF fla term term RPAR {
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+10);
-		sprintf(cur, "(%s %s %s else %s)", $2, $3, $4, $5);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR LET LPAR id expr RPAR term RPAR {
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+10);
-		sprintf(cur, "(%s (%s = %s, %s))", $2, $4, $5, $7);
-		$$ = strdup(cur);
-		free(cur);
-	}
-;
-multipleterm : term multipleterm {
-		struct Node *n = (struct Node *)malloc(sizeof(struct Node));
-		n->tok = strdup($1);
-		n->next = $2;
-		$$ = n;
-	}
-	| { $$ = NULL; }
-;
 
 %% 
 
@@ -232,7 +203,3 @@ char *opsWithMultipleArgs(char *op, char *arg1, char *arg2, struct Node *args, c
 	return parsed;
 }
 
-int main() {
-	yyparse();
-	return 0;
-}
