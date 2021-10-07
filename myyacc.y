@@ -21,14 +21,15 @@ struct node_int* tmp_t;
 
 
 %start prog
-%token CONST IDENTIFIER EVAL LPAR RPAR AROP AROPMUL GETINT GETBOOL TRUE FALSE IF LET LGOP CMOP NOT DEFFUN INT BOOL
-%type<str> CONST AROP AROPMUL IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL LGOP CMOP NOT DEFFUN INT BOOL type
-%type<val> expr exprs args id typefun
+%token CONST IDENTIFIER EVAL LPAR RPAR GETINT GETBOOL TRUE FALSE IF LET NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR CALL VARID FUNID
+%type<str> CONST IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR typevar
+%type<val> expr exprs args varid typefun funid
 
 %% 
 
-id : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }
-prog : LPAR DEFFUN LPAR id args RPAR typefun expr RPAR prog {
+varid : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }         // var identifier
+funid : IDENTIFIER { $$ = insert_node($1, FUNID); }             // function identifier 
+prog : LPAR DEFFUN LPAR funid args RPAR typefun expr RPAR prog { // function declaration
     insert_child($4);
     for (u_int i = 0; i < $5; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));
@@ -36,65 +37,103 @@ prog : LPAR DEFFUN LPAR id args RPAR typefun expr RPAR prog {
     insert_child($8);
     insert_node($2, DEFFUN);
 	}
-  | LPAR EVAL expr RPAR {
-    insert_node("main", $3+1);
-    insert_child($3+1);
+  | LPAR EVAL expr RPAR {                             // eval 
     insert_child($3);
     insert_node("ENTRY", EVAL);
   }
 ;
-args : LPAR type id RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }
+args : LPAR typevar varid RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }  // args functions
   | { $$ = 0; }
 ;
-typefun : INT { $$ = insert_node("ret INT", INT); } 
-  | BOOL { $$ = insert_node("ret BOOL", BOOL); } 
+typefun : INT { $$ = insert_node("ret INT", INT); }   // int type function
+  | BOOL { $$ = insert_node("ret BOOL", BOOL); }      // bool type function
 ;
-type : INT { $$ = strdup($1); } | BOOL { $$ = strdup($1); }
+typevar : INT { $$ = strdup($1); }                       // int type var
+  | BOOL { $$ = strdup($1); }                         // bool type var
 ;
-expr : CONST { $$ = insert_node($1, CONST); } 
-  | IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }
-  | TRUE { $$ = insert_node($1, TRUE); } | FALSE { $$ = insert_node($1, FALSE); }
-  | LPAR IDENTIFIER exprs RPAR {
+expr : CONST { $$ = insert_node($1, CONST); }         // numbers
+  | IDENTIFIER { $$ = insert_node($1, VARID); }       // variables
+  | TRUE { $$ = insert_node($1, TRUE); }              // true 
+  | FALSE { $$ = insert_node($1, FALSE); }            // false
+  | LPAR IDENTIFIER exprs RPAR {                      // function call
     for (u_int i = 0; i < $3; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));
-    $$ = insert_node($2, IDENTIFIER);
+    $$ = insert_node($2, CALL);
 	}
-	| LPAR IF expr expr expr RPAR {
+	| LPAR IF expr expr expr RPAR {                     // if
 	  insert_children(3, $3, $4, $5);
     $$ = insert_node($2, IF);
   }
-	| LPAR LET LPAR id expr RPAR expr RPAR {
+	| LPAR LET LPAR varid expr RPAR expr RPAR {         // let
 	  insert_children(3, $4, $5, $7);
     $$ = insert_node($2, LET);
   }
-	| LPAR GETBOOL RPAR	{ $$ = insert_node("GET-BOOL", GETBOOL); }
-	| LPAR LGOP expr expr exprs RPAR	{
+	| LPAR GETBOOL RPAR	{ $$ = insert_node("GET-BOOL", GETBOOL); }  // get-bool
+	| LPAR LAND expr expr exprs RPAR	{                 // Logical AND
     insert_children(2, $3, $4);
     for (u_int i = 0; i < $5; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));
-    $$ = insert_node($2, LGOP);
+    $$ = insert_node($2, LAND);
 	}
-	| LPAR CMOP expr expr RPAR	{ 
-	  insert_children(2, $3, $4);
-    $$ = insert_node($2, CMOP);
+	| LPAR LOR expr expr exprs RPAR	{               // Logical OR
+    insert_children(2, $3, $4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, LOR);
   }
-	| LPAR NOT expr RPAR	{
+	| LPAR EQUAL expr expr RPAR	{                       // EQUAL
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, EQUAL);
+  }
+	| LPAR GT expr expr RPAR	{                       // GT
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, GT);
+  }
+	| LPAR LT expr expr RPAR	{                       // LT 
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, LT);
+  }
+	| LPAR GE expr expr RPAR	{                       // GE 
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, GE);
+  }
+	| LPAR LE expr expr RPAR	{                       // LE 
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, LE);
+  }
+	| LPAR NOT expr RPAR	{                           // logical not
 	  insert_child($3);
     $$ = insert_node($2, NOT);
   }
-	| LPAR GETINT RPAR	{ $$ = insert_node("GET-INT", GETINT); }
-	| LPAR AROP expr expr RPAR { 
+	| LPAR GETINT RPAR	{ $$ = insert_node("GET-INT", GETINT); }  // get-int
+	| LPAR MOD expr expr RPAR {                       // MOD
 	  insert_children(2, $3, $4);
-    $$ = insert_node($2, AROP);
+    $$ = insert_node($2, MOD);
 	}
-	| LPAR AROPMUL expr expr exprs RPAR	{
+	| LPAR DIV expr expr RPAR	{                       // DIV 
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, DIV);
+  }
+	| LPAR MINUS expr expr exprs RPAR	{               // MINUS
     insert_children(2, $3, $4);
     for (u_int i = 0; i < $5; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));
-    $$ = insert_node($2, LGOP);
+    $$ = insert_node($2, MINUS);
 	}
+	| LPAR PLUS expr expr exprs RPAR	{               // PLUS
+    insert_children(2, $3, $4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, PLUS);
+  }
+	| LPAR MULT expr expr exprs RPAR	{               // MULT
+    insert_children(2, $3, $4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, MULT);
+  }
 ;
-exprs : expr exprs { push_int($1, &tmp_r, &tmp_t); $$ = $2+1; }
+exprs : expr exprs { push_int($1, &tmp_r, &tmp_t); $$ = $2+1; } // multiple exprs
 	| { $$ = 0; }
 ;
 

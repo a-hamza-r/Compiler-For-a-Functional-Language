@@ -6,21 +6,39 @@ int yyparse();
 
 int isTerm(struct ast *node)
 {
-  return 0;
+  int arr[] = {CONST, GETINT, PLUS, MINUS, MULT, DIV, MOD, VARID}; 
+  for (u_int i = 0; i < 8; i++)
+    if (node->ntoken == arr[i]) return 0;
+
+  if (node->ntoken == IF) 
+    return isTerm(get_child(node, 2)) && isTerm(get_child(node, 3));
+  else if (node->ntoken == CALL)    // yet to fix
+    return 0;
+  else if (node->ntoken == LET)
+    return isTerm(get_child(node, 3));
+  return 1;
+}
+
+int isFla(struct ast *node)
+{
+  int arr[] = {TRUE, FALSE, VARID, GETBOOL, EQUAL, LT, GT, LE, GE, NOT, LAND, LOR};
+  for (u_int i = 0; i < 12; i++)
+    if (node->ntoken == arr[i]) return 0;
+
+  if (node->ntoken == IF)
+    return isFla(get_child(node, 2)) && isFla(get_child(node, 3));
+  else if (node->ntoken == CALL)    // yet to fix
+    return 0;
+  else if (node->ntoken == LET)
+    return isFla(get_child(node, 3));
 }
 
 int tc(struct ast* node)
 {
-  /* 
-  printf("visit: %s\n", node->token);
-  struct ast_child *child = node->child;
-  while (child != NULL)
-  {
-    printf("  has child: %s\n", child->id->token);
-    child = child->next;
-  }
-
-  if (node->ntoken == AROP)
+  if (node->ntoken == PLUS || node->ntoken == MINUS || node->ntoken == MULT 
+    || node->ntoken == DIV || node->ntoken == MOD || node->ntoken == EQUAL
+    || node->ntoken == LT || node->ntoken == LE || node->ntoken == GT 
+    || node->ntoken == GE)
   {
     struct ast_child *child = node->child;
     while (child != NULL)
@@ -28,8 +46,24 @@ int tc(struct ast* node)
       if (isTerm(child->id) != 0) return 1;
       child = child->next;
     }
+    return 0;
   }
-  */
+  else if (node->ntoken == NOT || node->ntoken == LAND || node->ntoken == LOR)
+  {
+    struct ast_child *child = node->child;
+    while (child != NULL)
+    {
+      if (isFla(child->id) != 0) return 1;
+      child = child->next;
+    }
+    return 0;
+  }
+  else if (node->ntoken == IF)
+  {
+    return !(isFla(get_child(node, 1)) == 0 && 
+      ((isTerm(get_child(node, 2)) == 0 && isTerm(get_child(node, 3)) == 0) || 
+      (isFla(get_child(node, 2)) == 0 && isFla(get_child(node, 3)) == 0)));
+  }
 
   return 0;
 }
