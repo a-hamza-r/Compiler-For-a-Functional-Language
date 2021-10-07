@@ -3,203 +3,102 @@
 
 #include <stdio.h>
 #include <string.h>
-void yyerror(char* s);
-int yylex();
+#include "containers/containers.h"
 
-struct Node {
-	char *tok;
-	struct Node *next;
-};
 typedef unsigned int u_int;
 
-char *opsWithMultipleArgs(char *, char *, char *, struct Node *, char *);
+int yylex();
+void yyerror(char *s);
 
+struct node_int* tmp_r;
+struct node_int* tmp_t;
 %}
 
 %union {
 	int val; 
 	char* str;
-	struct Node* lst;
 }
+
 
 %start prog
 %token CONST IDENTIFIER EVAL LPAR RPAR AROP AROPMUL GETINT GETBOOL TRUE FALSE IF LET LGOP CMOP NOT DEFFUN INT BOOL
-%type<str> CONST AROP AROPMUL expr IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL LGOP CMOP NOT DEFFUN type INT BOOL funcall funcdecl
-%type<lst> multipleexpr args exprfun
-
+%type<str> CONST AROP AROPMUL IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL LGOP CMOP NOT DEFFUN INT BOOL type
+%type<val> expr exprs args id typefun
 
 %% 
 
-prog : funcdecl prog
-	| LPAR EVAL expr RPAR {
-		char *cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+10);
-		printf("%s %s", $2, $3); 
-		free(cur);
+id : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }
+prog : LPAR DEFFUN LPAR id args RPAR typefun expr RPAR prog {
+    insert_child($4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    insert_child($7);
+    insert_child($8);
+    insert_node($2, DEFFUN);
 	}
+  | LPAR EVAL expr RPAR {
+    insert_node("main", $3+1);
+    insert_child($3+1);
+    insert_child($3);
+    insert_node("ENTRY", EVAL);
+  }
 ;
-funcdecl : LPAR DEFFUN LPAR IDENTIFIER args RPAR type expr RPAR {
-		struct Node *tmp = $5;
-		u_int size = 0;
-		while (tmp != NULL)
-		{
-			size += strlen(tmp->tok)+2;
-			tmp = tmp->next;
-		}
-		char *cur;
-		cur = (char *)malloc(size+10);
-		strcat(cur, "(");
-		tmp = $5;
-		while (tmp != NULL && tmp->next != NULL)
-		{
-			sprintf(cur, "%s%s, ", cur, tmp->tok);
-			tmp = tmp->next;
-		}
-		if (tmp != NULL) sprintf(cur, "%s%s", cur, tmp->tok);
-		strcat(cur, ")");
-		printf("%s %s %s : %s", $7, $4, cur, $8);
-		free(cur); free(tmp);
-	}
+args : LPAR type id RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }
+  | { $$ = 0; }
 ;
-args :  { $$ = NULL; }
-	| LPAR type IDENTIFIER RPAR args {
-		char *cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+10);
-		sprintf(cur, "%s %s", $2, $3);
-		struct Node *ret = (struct Node *)malloc(sizeof(struct Node));
-		ret->tok = strdup(cur);
-		ret->next = $5;
-		$$ = ret;
-		free(cur);
-	}
+typefun : INT { $$ = insert_node("ret INT", INT); } 
+  | BOOL { $$ = insert_node("ret BOOL", BOOL); } 
 ;
 type : INT { $$ = strdup($1); } | BOOL { $$ = strdup($1); }
 ;
-expr : CONST { $$ = strdup($1); } | IDENTIFIER { $$ = strdup($1); }
-  | TRUE { $$ = strdup($1); } | FALSE { $$ = strdup($1); }
-	| funcall { $$ = strdup($1); }
+expr : CONST { $$ = insert_node($1, CONST); } 
+  | IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }
+  | TRUE { $$ = insert_node($1, TRUE); } | FALSE { $$ = insert_node($1, FALSE); }
+  | LPAR IDENTIFIER exprs RPAR {
+    for (u_int i = 0; i < $3; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, IDENTIFIER);
+	}
 	| LPAR IF expr expr expr RPAR {
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+strlen($5)+10);
-		sprintf(cur, "(%s %s %s else %s)", $2, $3, $4, $5);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR LET LPAR IDENTIFIER expr RPAR expr RPAR {
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($4)+strlen($5)+strlen($7)+10);
-		sprintf(cur, "(%s (%s = %s, %s))", $2, $4, $5, $7);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR GETBOOL RPAR	{ $$ = strdup($2); }
-	| LPAR LGOP expr expr multipleexpr RPAR	{
-		char *parsed;
-		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
-		$$ = strdup(parsed);
-		free(parsed);
+	  insert_children(3, $3, $4, $5);
+    $$ = insert_node($2, IF);
+  }
+	| LPAR LET LPAR id expr RPAR expr RPAR {
+	  insert_children(3, $4, $5, $7);
+    $$ = insert_node($2, LET);
+  }
+	| LPAR GETBOOL RPAR	{ $$ = insert_node("GET-BOOL", GETBOOL); }
+	| LPAR LGOP expr expr exprs RPAR	{
+    insert_children(2, $3, $4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, LGOP);
 	}
 	| LPAR CMOP expr expr RPAR	{ 
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
-		sprintf(cur, "(%s %s %s)", $3, $2, $4);
-		$$ = strdup(cur);
-		free(cur);
-	}
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, CMOP);
+  }
 	| LPAR NOT expr RPAR	{
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+10);
-		sprintf(cur, "(%s %s)", $2, $3);
-		$$ = strdup(cur);
-		free(cur);
-	}
-	| LPAR GETINT RPAR	{
-		char *cur;
-		cur = (char *)malloc(strlen($2)+10);
-		sprintf(cur, "(%s)", $2);
-		$$ = strdup(cur); 
-		free(cur);
-	}
+	  insert_child($3);
+    $$ = insert_node($2, NOT);
+  }
+	| LPAR GETINT RPAR	{ $$ = insert_node("GET-INT", GETINT); }
 	| LPAR AROP expr expr RPAR { 
-		char* cur;
-		cur = (char *)malloc(strlen($2)+strlen($3)+strlen($4)+10);
-		sprintf(cur, "(%s %s %s)", $3, $2, $4);
-		$$ = strdup(cur);
-		free(cur);
+	  insert_children(2, $3, $4);
+    $$ = insert_node($2, AROP);
 	}
-	| LPAR AROPMUL expr expr multipleexpr RPAR	{
-		char *parsed;
-		parsed = opsWithMultipleArgs($2, $3, $4, $5, parsed);
-		$$ = strdup(parsed);
-		free(parsed);
+	| LPAR AROPMUL expr expr exprs RPAR	{
+    insert_children(2, $3, $4);
+    for (u_int i = 0; i < $5; i++)
+      insert_child(pop_int(&tmp_r, &tmp_t));
+    $$ = insert_node($2, LGOP);
 	}
 ;
-multipleexpr : expr multipleexpr {
-		struct Node *n = (struct Node *)malloc(sizeof(struct Node));
-		n->tok = strdup($1);
-		n->next = $2;
-		$$ = n;
-	}
-	| { $$ = NULL; }
-;
-funcall : LPAR IDENTIFIER exprfun RPAR {
-		char* cur;
-		u_int size = 0;
-		struct Node *tmp = $3;
-		while (tmp != NULL)
-		{
-			size += strlen(tmp->tok)+2;
-			tmp = tmp->next;
-		}
-		cur = (char *)malloc(size+10);
-		strcat(cur, "(");
-		tmp = $3;
-		while (tmp != NULL && tmp->next != NULL)
-		{
-			sprintf(cur, "%s%s, ", cur, tmp->tok);
-			tmp = tmp->next;
-		}
-		if (tmp != NULL) sprintf(cur, "%s%s", cur, tmp->tok);
-		strcat(cur, ")");
-		char *ret = (char *)malloc(size+strlen($2)+10);
-		sprintf(ret, "(%s %s)", $2, cur);
-		$$ = strdup(ret);
-		free(cur); free(ret); free(tmp);
-	}
-;
-exprfun : { $$ = NULL; }
-	| expr exprfun {
-		struct Node *ret = (struct Node *)malloc(sizeof(struct Node));
-		ret->tok = $1;
-		ret->next = $2;
-		$$ = ret;
-	}
+exprs : expr exprs { push_int($1, &tmp_r, &tmp_t); $$ = $2+1; }
+	| { $$ = 0; }
 ;
 
 %% 
 
 void yyerror (char *s) {fprintf(stderr, "%s\n", s);}
-
-char *opsWithMultipleArgs(char *op, char *arg1, char *arg2, struct Node *args, char *parsed)
-{	
-	struct Node *tmp = args;
-	u_int size = 0;
-	while (tmp != NULL) 
-	{
-		size += strlen(tmp->tok)+strlen(op)+1;
-		tmp = tmp->next;
-	}
-	parsed = (char *)malloc(size+strlen(arg1)+strlen(arg2)+strlen(op)+10);
-	sprintf(parsed, "(%s %s %s", arg1, op, arg2);
-	tmp = args;
-	while (tmp != NULL && tmp->next != NULL)
-	{
-		sprintf(parsed, "%s %s %s", parsed, op, tmp->tok);
-		tmp = tmp->next;
-	}
-	if (tmp != NULL) sprintf(parsed, "%s %s %s", parsed, op, tmp->tok);
-	strcat(parsed, ")");
-	free(tmp);
-	return parsed;
-}
 

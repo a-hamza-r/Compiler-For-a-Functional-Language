@@ -296,6 +296,7 @@ void print_ast(){
   visit_ast(print);
   fprintf(fp, "}\n ");
   fclose(fp);
+  system("dot -Tpdf ast.dot -o ast.pdf");
 }
 
 void free_ast() {

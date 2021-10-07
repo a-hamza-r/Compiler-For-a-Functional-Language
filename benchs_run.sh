@@ -4,9 +4,16 @@ files="testcases/$1/*"
 outfile="testcases/$1.out"
 for f in $files
 do
-	echo "Running $f"
-	./comp < $f
+  if [ ! -d "$f" ]; then 
+    filename="$(basename -- $f)"
+	  echo "Running $f"
+	  ./comp < $f
+    if [ "$1" = "good" ]; then 
+      dot -Tpdf ast.dot -o testcases/$1/asts/$filename.pdf
+    fi
+  fi
+
 done &> $outfile
 
-cat $outfile | grep "Running\|error" &> "$outfile.grepped"
+cat $outfile | grep -i "Running\|error\|segmentation\|aborted" &> "$outfile.grepped"
 cat "$outfile.grepped"
