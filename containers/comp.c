@@ -4,6 +4,23 @@
 
 int yyparse();
 
+struct node_fun_str* fun_r = NULL;
+struct node_fun_str* fun_t = NULL;
+struct node_var_str* var_r = NULL;
+struct node_var_str* var_t = NULL;
+
+
+int getFunsAndVars()
+{
+  /*
+  if (node->ntoken == DEFFUN)
+  {
+    char *funName = get_child(node, 1);
+  }
+  */
+  return 0;
+}
+
 int isTerm(struct ast *node)
 {
   int arr[] = {CONST, GETINT, PLUS, MINUS, MULT, DIV, MOD, VARID}; 
@@ -11,7 +28,7 @@ int isTerm(struct ast *node)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF) 
-    return isTerm(get_child(node, 2)) && isTerm(get_child(node, 3));
+    return !(isTerm(get_child(node, 2)) == 0 && isTerm(get_child(node, 3)) == 0);
   else if (node->ntoken == CALL)    // yet to fix
     return 0;
   else if (node->ntoken == LET)
@@ -26,7 +43,7 @@ int isFla(struct ast *node)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF)
-    return isFla(get_child(node, 2)) && isFla(get_child(node, 3));
+    return !(isFla(get_child(node, 2)) == 0 && isFla(get_child(node, 3)) == 0);
   else if (node->ntoken == CALL)    // yet to fix
     return 0;
   else if (node->ntoken == LET)
@@ -46,7 +63,6 @@ int tc(struct ast* node)
       if (isTerm(child->id) != 0) return 1;
       child = child->next;
     }
-    return 0;
   }
   else if (node->ntoken == NOT || node->ntoken == LAND || node->ntoken == LOR)
   {
@@ -56,7 +72,6 @@ int tc(struct ast* node)
       if (isFla(child->id) != 0) return 1;
       child = child->next;
     }
-    return 0;
   }
   else if (node->ntoken == IF)
   {
@@ -75,8 +90,9 @@ int typecheck()
 
 int main (int argc, char **argv) {
   int retval = yyparse();
+  if (retval != 0) return 1;
+  visit_ast(getFunsAndVars);
   if (retval == 0) retval = typecheck();
-  else return 1;
   if (retval == 0) print_ast();      // run `dot -Tpdf ast.dot -o ast.pdf` to create a PDF
   else printf("Semantic error\n");
   free_ast();
