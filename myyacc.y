@@ -21,13 +21,15 @@ struct node_int* tmp_t;
 
 
 %start prog
-%token CONST IDENTIFIER EVAL LPAR RPAR GETINT GETBOOL TRUE FALSE IF LET NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR CALL VARID FUNID
-%type<str> CONST IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR typevar
-%type<val> expr exprs args varid typefun funid
+%token CONST IDENTIFIER EVAL LPAR RPAR GETINT GETBOOL TRUE FALSE IF LET NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR CALL VARID FUNID INTDECL BOOLDECL
+%type<str> CONST IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR
+%type<val> expr exprs args vardecl typefun funid var intdecl booldecl
 
 %% 
 
-varid : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }         // var identifier
+var : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }         // var identifier
+intdecl : IDENTIFIER { $$ = insert_node($1, INTDECL); }         // var identifier
+booldecl : IDENTIFIER { $$ = insert_node($1, BOOLDECL); }         // var identifier
 funid : IDENTIFIER { $$ = insert_node($1, FUNID); }             // function identifier 
 prog : LPAR DEFFUN LPAR funid args RPAR typefun expr RPAR prog { // function declaration
     insert_child($4);
@@ -42,14 +44,12 @@ prog : LPAR DEFFUN LPAR funid args RPAR typefun expr RPAR prog { // function dec
     insert_node("ENTRY", EVAL);
   }
 ;
-args : LPAR typevar varid RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }  // args functions
+args : LPAR INT intdecl RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }  // args functions
+  | LPAR BOOL booldecl RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }  // args functions
   | { $$ = 0; }
 ;
 typefun : INT { $$ = insert_node("ret INT", INT); }   // int type function
   | BOOL { $$ = insert_node("ret BOOL", BOOL); }      // bool type function
-;
-typevar : INT { $$ = strdup($1); }                       // int type var
-  | BOOL { $$ = strdup($1); }                         // bool type var
 ;
 expr : CONST { $$ = insert_node($1, CONST); }         // numbers
   | IDENTIFIER { $$ = insert_node($1, VARID); }       // variables
@@ -64,7 +64,7 @@ expr : CONST { $$ = insert_node($1, CONST); }         // numbers
 	  insert_children(3, $3, $4, $5);
     $$ = insert_node($2, IF);
   }
-	| LPAR LET LPAR varid expr RPAR expr RPAR {         // let
+	| LPAR LET LPAR var expr RPAR expr RPAR {         // let
 	  insert_children(3, $4, $5, $7);
     $$ = insert_node($2, LET);
   }

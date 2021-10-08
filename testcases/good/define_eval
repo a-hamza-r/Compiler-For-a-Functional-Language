@@ -1,1 +1,4 @@
-(eval (varfun (+ 1 2 var) (varfun2 (let (a (+ v v1)) (+ a 2)) (= 1 (if (and v true (= 1 2)) (+ v v1 v2) (func 1 v 123 true))) (and true v)) (* 1 (+ var 2 4) var)))
+(define-fun (varfun (bool var) (bool var2) (int var3)) bool (+ var var3))
+(define-fun (varfun2 (bool var) (bool var2) (bool var3)) int (+ 1 (div 3 (if var (* var3 2) 1))))
+; (eval (f))
+(eval (varfun (+ 1 2 aaaaaa) (varfun2 (let (a (+ v v1)) (+ a 2)) (= 1 (if (and v true (= 1 2)) (+ v v1 v2) (func 1 v 123 true))) (and true v)) (* 1 (+ aaaaaa 2 4) aaaaaa)))
