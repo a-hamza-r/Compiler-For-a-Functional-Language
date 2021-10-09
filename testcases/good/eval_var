@@ -1,2 +1,2 @@
 ; asfsdfs sdf sdf asdf sf 123134134 1348909)_**)_*(&*&)
-(eval var)
+(eval (let (var (= 1 2)) var))

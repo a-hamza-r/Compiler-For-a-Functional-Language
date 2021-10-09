@@ -98,12 +98,12 @@ void push_var_str (int begin_id, int end_id, int type, char* name, struct node_v
   }
 }
 
-void push_fun_str (char* name, int type, int arity, struct node_var_str* args, struct node_fun_str** r, struct node_fun_str** t) {
+void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, struct node_fun_str** r, struct node_fun_str** t) {
   if (*r == NULL){
     *r = (struct node_fun_str*)malloc(sizeof(struct node_fun_str)); //Create a new node
     (*r)->name = name;
     (*r)->type = type;
-    (*r)->args = args;
+    (*r)->argTypes = argTypes;
     (*r)->next = NULL;
     (*r)->arity = arity;
     *t = *r;
@@ -111,7 +111,7 @@ void push_fun_str (char* name, int type, int arity, struct node_var_str* args, s
   else {
     struct node_fun_str* ptr;
     ptr = (struct node_fun_str*)malloc(sizeof(struct node_fun_str));  //Create a temporary node
-    ptr->args = args;
+    ptr->argTypes = argTypes;
     ptr->type = type;
     ptr->name = name;
     ptr->arity = arity;

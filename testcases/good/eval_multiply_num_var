@@ -1,1 +1,2 @@
-(eval (* 1 1 var1))
+(define-fun (f) int (+ (get-int) (get-int)))
+(eval (* 1 1 (f)))

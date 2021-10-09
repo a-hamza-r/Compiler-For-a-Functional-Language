@@ -1,1 +1,2 @@
-(eval var01)
+(define-fun (var01 (int v) (bool v1)) bool (and (= v 1) v1))
+(eval (var01 1 (get-bool)))

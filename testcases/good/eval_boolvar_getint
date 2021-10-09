@@ -1,1 +1,1 @@
-(eval (and var1 (get-bool)))
+(eval (and (let (var1 (= 1 2)) var1) (get-bool)))

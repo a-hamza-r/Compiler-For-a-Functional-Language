@@ -21,13 +21,13 @@ struct node_int* tmp_t;
 
 
 %start prog
-%token CONST IDENTIFIER EVAL LPAR RPAR GETINT GETBOOL TRUE FALSE IF LET NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR CALL VARID FUNID INTDECL BOOLDECL
+%token CONST IDENTIFIER EVAL LPAR RPAR GETINT GETBOOL TRUE FALSE IF LET NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR CALL VARID FUNID INTDECL BOOLDECL VARDECL
 %type<str> CONST IDENTIFIER GETINT GETBOOL TRUE FALSE IF LET EVAL NOT DEFFUN INT BOOL PLUS MINUS MULT DIV MOD EQUAL GT LT GE LE LAND LOR
-%type<val> expr exprs args vardecl typefun funid var intdecl booldecl
+%type<val> expr exprs args typefun funid var intdecl booldecl
 
 %% 
 
-var : IDENTIFIER { $$ = insert_node($1, IDENTIFIER); }         // var identifier
+var : IDENTIFIER { $$ = insert_node($1, VARDECL); }         // var identifier
 intdecl : IDENTIFIER { $$ = insert_node($1, INTDECL); }         // var identifier
 booldecl : IDENTIFIER { $$ = insert_node($1, BOOLDECL); }         // var identifier
 funid : IDENTIFIER { $$ = insert_node($1, FUNID); }             // function identifier 
