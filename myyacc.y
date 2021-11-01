@@ -27,9 +27,9 @@ struct node_int* tmp_t;
 
 %% 
 
-var : IDENTIFIER { $$ = insert_node($1, VARDECL); }         // var identifier
-intdecl : IDENTIFIER { $$ = insert_node($1, INTDECL); }         // var identifier
-booldecl : IDENTIFIER { $$ = insert_node($1, BOOLDECL); }         // var identifier
+var : IDENTIFIER { $$ = insert_node($1, VARDECL); }         // var use identifier
+intdecl : IDENTIFIER { $$ = insert_node($1, INTDECL); }         // int declaration
+booldecl : IDENTIFIER { $$ = insert_node($1, BOOLDECL); }         // bool declaration
 funid : IDENTIFIER { $$ = insert_node($1, FUNID); }             // function identifier 
 prog : LPAR DEFFUN LPAR funid args RPAR typefun expr RPAR prog { // function declaration
     insert_child($4);

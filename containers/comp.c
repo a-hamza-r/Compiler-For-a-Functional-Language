@@ -11,15 +11,16 @@ struct node_fun_str* fun_t = NULL;
 struct node_var_str* var_r = NULL;
 struct node_var_str* var_t = NULL;
 
-
+// get function and variable declarations
 int getFunsAndVars(struct ast* node)
 {
+  // function declarations
   if (node->ntoken == DEFFUN)
   {
     char *funName = get_child(node, 1)->token;
     if (find_fun_str(funName, fun_r) != NULL)
     {
-      printf("double declaration\n");
+      printf("double declaration of functions\n");
       return 1;
     }
     int numChild = get_child_num(node);
@@ -35,31 +36,37 @@ int getFunsAndVars(struct ast* node)
 
     push_fun_str(funName, get_child(node, numChild-1)->ntoken, numChild-3, 
       argTypes_r, &fun_r, &fun_t);
+ 
+    return 0;
   }
-  else if (node->ntoken == INTDECL || node->ntoken == BOOLDECL)
+
+  // Variable declarations
+  int type;
+  struct ast* parent = node->parent;
+  if (node->ntoken == INTDECL || node->ntoken == BOOLDECL)    // variable decls inside function
+    type = node->ntoken == INTDECL ? INT : BOOL;
+  else if (node->ntoken == VARDECL)                           // variable decls inside let
+    type = isFla(get_child(parent, 2)) ? INT : BOOL;
+  else return 0;
+
+  int numChild = get_child_num(parent);
+  struct ast* firstChild = parent->child->id;
+  struct ast* lastChild = get_child(parent, numChild);
+  if (find_var_str(node->id, node->token, var_r) != NULL) 
   {
-    struct ast* parent = node->parent;
-    //printf("found variable decl: %s\n", node->token);
-    int type = node->ntoken == INTDECL ? INT : BOOL;
-    int numChild = get_child_num(parent);
-    struct ast* lastChild = get_child(parent, numChild);
-    push_var_str(node->id, lastChild->id, type, node->token, &var_r, &var_t);
+    printf("variable %s already declared in this scope\n", node->token);
+    return 1;
   }
-  else if (node->ntoken == VARDECL)
-  {
-    struct ast* parent = node->parent;
-    struct ast* c2 = get_child(parent, 2);
-    struct ast* c3 = get_child(parent, 3);
-    int type = isFla(c2) ? INT : BOOL;
-    push_var_str(node->id, c3->id, type, node->token, &var_r, &var_t);
-  }
+  push_var_str(firstChild->id, lastChild->id, type, node->token, &var_r, &var_t);
   return 0;
 }
 
+
+// check if a given node is a term, i.e., has a type INT
 int isTerm(struct ast *node)
 {
   int arr[] = {CONST, GETINT, PLUS, MINUS, MULT, DIV, MOD}; 
-  for (u_int i = 0; i < 7; i++)
+  for (u_int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF) 
@@ -79,10 +86,12 @@ int isTerm(struct ast *node)
   return 1;
 }
 
+
+// check if a given node is a formula, i.e. has a type BOOL
 int isFla(struct ast *node)
 {
   int arr[] = {TRUE, FALSE, GETBOOL, EQUAL, LT, GT, LE, GE, NOT, LAND, LOR};
-  for (u_int i = 0; i < 11; i++)
+  for (u_int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF)
@@ -102,8 +111,9 @@ int isFla(struct ast *node)
   return 1;
 }
 
-int tc(struct ast* node)
+int typecheck(struct ast* node)
 {
+  // handle operations that have all children as terms
   if (node->ntoken == PLUS || node->ntoken == MINUS || node->ntoken == MULT 
     || node->ntoken == DIV || node->ntoken == MOD || node->ntoken == EQUAL
     || node->ntoken == LT || node->ntoken == LE || node->ntoken == GT 
@@ -116,6 +126,7 @@ int tc(struct ast* node)
       child = child->next;
     }
   }
+  // handle operations that have all children as flas
   else if (node->ntoken == NOT || node->ntoken == LAND || node->ntoken == LOR)
   {
     struct ast_child *child = node->child;
@@ -125,12 +136,14 @@ int tc(struct ast* node)
       child = child->next;
     }
   }
+  // handle if-statement
   else if (node->ntoken == IF)
   {
     return !(isFla(get_child(node, 1)) == 0 && 
       ((isTerm(get_child(node, 2)) == 0 && isTerm(get_child(node, 3)) == 0) || 
       (isFla(get_child(node, 2)) == 0 && isFla(get_child(node, 3)) == 0)));
   }
+  // handle variable use
   else if (node->ntoken == VARID)
   {
     if (find_var_str(node->id, node->token, var_r) == NULL)
@@ -139,6 +152,7 @@ int tc(struct ast* node)
       return 1;
     }
   }
+  // handle function calls
   else if (node->ntoken == CALL)
   {
     struct node_fun_str* info = find_fun_str(node->token, fun_r);
@@ -159,25 +173,43 @@ int tc(struct ast* node)
       if (!((isTerm(c->id) == 0 && types->id == INTDECL) 
         || (isFla(c->id) == 0 && types->id == BOOLDECL)))
       {
+        printf("Type mismatch for variables of function %s\n", node->token);
         return 1;
       }
       c = c->next; types = types->next;
+    }
+  }
+  // check the return type of a declared function
+  else if (node->ntoken == DEFFUN)
+  {
+    char *funcName = node->child->id->token;
+    struct ast* lastChild = get_child(node, get_child_num(node));
+    struct node_fun_str* info = find_fun_str(funcName, fun_r);
+    if (!(info->type == INT && isTerm(lastChild) == 0 
+      || info->type == BOOL && isFla(lastChild) == 0))
+    {
+      printf("Return type of %s does not match the body\n", funcName);
+      return 1;
+    }
+  }
+  // check if any declared variable is not the same as function 
+  if (node->ntoken == INTDECL || node->ntoken == BOOLDECL || node->ntoken == VARDECL)
+  {
+    if (find_fun_str(node->token, fun_r) != NULL)
+    {
+      printf("variable %s is declared as a function\n", node->token);
+      return 1;
     }
   }
 
   return 0;
 }
 
-int typecheck()
-{
-  return visit_ast(tc);
-}
-
 int main (int argc, char **argv) {
   int retval = yyparse();
   if (retval != 0) return 1;
-  if (visit_ast(getFunsAndVars) == 1) return 1;
-  if (retval == 0) retval = typecheck();
+  retval = visit_ast(getFunsAndVars);
+  if (retval == 0) retval = visit_ast(typecheck);
   if (retval == 0) print_ast();      // run `dot -Tpdf ast.dot -o ast.pdf` to create a PDF
   else printf("Semantic error\n");
   free_ast();
