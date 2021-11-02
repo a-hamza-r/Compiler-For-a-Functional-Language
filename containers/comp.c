@@ -212,6 +212,10 @@ int main (int argc, char **argv) {
   if (retval == 0) retval = visit_ast(typecheck);
   if (retval == 0) print_ast();      // run `dot -Tpdf ast.dot -o ast.pdf` to create a PDF
   else printf("Semantic error\n");
+  
+  clean_fun_str(&fun_r);
+  clean_var_str(&var_r);
   free_ast();
+
   return retval;
 }
