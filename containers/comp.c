@@ -1,15 +1,33 @@
 #include <stdio.h>
 #include "../y.tab.h"
 #include "containers.h"
+#include "instructions.h"
 
 int yyparse();
 int isFla(struct ast*);
 int isTerm(struct ast*);
 
+// symbol table
 struct node_fun_str* fun_r = NULL;
 struct node_fun_str* fun_t = NULL;
 struct node_var_str* var_r = NULL;
 struct node_var_str* var_t = NULL;
+
+// CFG data structures
+struct br_instr* bb_root = NULL;
+struct br_instr* bb_tail = NULL;
+
+struct asgn_instr* asgn_root = NULL;
+struct asgn_instr* asgn_tail = NULL;
+
+struct node_istr* ifun_r = NULL;
+struct node_istr* ifun_t = NULL;
+
+struct node_int* bb_num_root = NULL;
+struct node_int* bb_num_tail = NULL;
+
+int current_bb = 0;
+int current_bb_for_instrs = -1;
 
 // get function and variable declarations
 int getFunsAndVars(struct ast* node)
@@ -57,7 +75,7 @@ int getFunsAndVars(struct ast* node)
     printf("variable %s already declared in this scope\n", node->token);
     return 1;
   }
-  push_var_str(firstChild->id, lastChild->id, type, node->token, &var_r, &var_t);
+  push_var_str(firstChild->id, lastChild->id, type, node->token, -1, &var_r, &var_t);
   return 0;
 }
 
@@ -205,14 +223,276 @@ int typecheck(struct ast* node)
   return 0;
 }
 
+void procRec(struct ast* node)
+{
+  if (node->ntoken == IF)
+  {
+    procRec(get_child(node, 1));  // recurse for guard 
+   
+    int tmp_bb1 = current_bb+1;
+    int tmp_bb2 = current_bb+2;
+    int tmp_bb3 = current_bb+3;
+    current_bb+=4;
+    
+    struct br_instr* bri = mk_cbr(bb_num_tail->id, 999, tmp_bb1, tmp_bb2);
+    push_br(bri, &bb_root, &bb_tail);
+    
+    // bb for then
+    push_int(tmp_bb1, &bb_num_root, &bb_num_tail);
+    procRec(get_child(node, 2));  // recurse for then
+    bri = mk_ubr(bb_num_tail->id, tmp_bb3);
+    push_br(bri, &bb_root, &bb_tail);
+    
+    // bb for else
+    push_int(tmp_bb2, &bb_num_root, &bb_num_tail);
+    procRec(get_child(node, 3));  // recurse for else
+    bri = mk_ubr(bb_num_tail->id, tmp_bb3);
+    push_br(bri, &bb_root, &bb_tail);
+    
+    // bb for join
+    push_int(tmp_bb3, &bb_num_root, &bb_num_tail);
+  }
+  else 
+  {
+    int numChild = get_child_num(node);
+    for (int i = 1; i <= numChild; i++)
+      procRec(get_child(node, i));
+  }
+}
+
+
+int computeBrStructure(struct ast* node)
+{
+  struct br_instr *bri;
+  // function definition
+  if (node->ntoken == DEFFUN || node->ntoken == EVAL)
+  {
+    char *istr = node->ntoken == DEFFUN ? get_child(node, 1)->token : "print";
+    // create a new CFG, with entry and exit
+    push_istr(current_bb, istr, &ifun_r, &ifun_t);
+    push_int(current_bb, &bb_num_root, &bb_num_tail);
+    procRec(get_child(node, get_child_num(node)));
+    bri = mk_ubr(bb_num_tail->id, -1);
+    push_br(bri, &bb_root, &bb_tail);
+  }
+
+  return 0;
+}
+
+int fillInstrs(struct ast* node)
+{
+  if (node->ntoken == EQUAL || node->ntoken == PLUS || node->ntoken == MULT 
+    || node->ntoken == MINUS || node->ntoken == DIV || node->ntoken == MOD 
+    || node->ntoken == LT || node->ntoken == LE || node->ntoken == GT 
+    || node->ntoken == GE || node->ntoken == LAND || node->ntoken == LOR)
+  {
+    int lhs = node->id;
+    struct ast* c1 = get_child(node, 1), *c2 = get_child(node, 2);
+    int op1, op2;
+    if (c1->ntoken == VARID)
+    {
+      struct node_var_str* v = find_var_str(c1->id, c1->token, var_r);
+      op1 = v->reg_id;
+    }
+    else op1 = c1->id;
+    if (c2->ntoken == VARID)
+    {
+      struct node_var_str* v = find_var_str(c2->id, c2->token, var_r);
+      op2 = v->reg_id;
+    }
+    else op2 = c2->id;
+    struct asgn_instr *asgn = mk_basgn(current_bb_for_instrs, lhs, op1, op2, node->ntoken);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == CONST)
+  {
+    int lhs = node->id;
+    int op1 = atoi(node->token);
+    struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, node->ntoken);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == TRUE || node->ntoken == FALSE)
+  {
+    int lhs = node->id;
+    struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, lhs, node->ntoken);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == NOT)
+  {
+    int lhs = node->id;
+    int op1;
+    struct ast* c1 = get_child(node, 1);
+    if (c1->ntoken == VARID)
+    {
+      struct node_var_str* v = find_var_str(c1->id, c1->token, var_r);
+      op1 = v->reg_id;
+    }
+    else op1 = c1->id;
+    struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, node->ntoken);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == GETINT || node->ntoken == GETBOOL || node->ntoken == CALL)
+  {
+    if (node->ntoken == CALL)
+    {
+      struct node_fun_str* f = find_fun_str(node->token, fun_r);
+      for (int i = 1; i <= f->arity; i++)
+      {
+        struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, -i, get_child(node, i)->id, -1);
+        push_asgn(asgn, &asgn_root, &asgn_tail);
+      }
+    }
+    int lhs = node->id;
+    struct asgn_instr *asgn = mk_casgn(current_bb_for_instrs, lhs, node->token);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == FUNID)
+  {
+    struct ast* parent = node->parent;
+    char *funcName = node->token;
+    struct node_fun_str* info = find_fun_str(funcName, fun_r);
+    for (int i = 1; i <= info->arity; i++)
+    {
+      struct ast* childNode = get_child(parent, i+1);
+      int lhs = childNode->id, op1 = -i;
+      struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, -1);
+      push_asgn(asgn, &asgn_root, &asgn_tail);
+      struct node_var_str* v = find_var_str(childNode->id, childNode->token, var_r);
+      v->reg_id = lhs;
+    }
+  }
+  if (node->parent != NULL && node->parent->ntoken == LET)
+  {
+    struct ast* parent = node->parent;
+    struct ast* firstChild = get_child(parent, 1);
+    struct ast* secondChild = get_child(parent, 2);
+    if (node->id == secondChild->id)
+    {
+      int lhs = firstChild->id, op1 = secondChild->id;
+      struct node_var_str* v = find_var_str(firstChild->id, firstChild->token, var_r);
+      v->reg_id = lhs;
+      struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, -1);
+      push_asgn(asgn, &asgn_root, &asgn_tail);
+    }
+  }
+  // if last child of define-fun, assign rv to its associated register 
+  if (node->parent != NULL && node->parent->ntoken == DEFFUN)
+  {
+    struct ast* parent = node->parent;
+    struct ast* lastChild = get_child(parent, get_child_num(parent));
+    if (node->id == lastChild->id)
+    {
+      struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, 0, lastChild->id, lastChild->ntoken);
+      push_asgn(asgn, &asgn_root, &asgn_tail);
+    }
+  }
+  if (node->parent != NULL && node->parent->ntoken == IF)
+  {
+    struct ast* parent = node->parent;
+    struct ast* firstChild = get_child(parent, 1);
+    struct ast* secondChild = get_child(parent, 1);
+    if (node->id == firstChild->id)
+    {
+      struct br_instr* b = find_br_instr(current_bb_for_instrs, bb_root);
+      if (b != NULL)
+        b->cond = node->id;
+      current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
+    }
+    else 
+    {
+      struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, node->id, -1);
+      push_asgn(asgn, &asgn_root, &asgn_tail);
+      current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
+    }
+  }
+  return 0;
+}
+
+
+void print_asgn(struct asgn_instr *asgn)
+{
+  if (asgn->bin == 0) 
+  {
+    if (asgn->type == CONST)
+      printf("v%d := %d\n", asgn->lhs, asgn->op1);
+    else if (asgn->type == NOT)
+      printf("v%d := not v%d\n", asgn->lhs, asgn->op1);
+    else if (asgn->type == TRUE)
+      printf("v%d := 1\n", asgn->lhs);
+    else if (asgn->type == FALSE)
+      printf("v%d := 0\n", asgn->lhs);
+    else if (asgn->op1 < 0)
+      printf("v%d := a%d\n", asgn->lhs, -asgn->op1);
+    else if (asgn->lhs == 0)
+      printf("rv := v%d\n", asgn->op1);
+    else if (asgn->lhs < 0)
+      printf("a%d := v%d\n", -asgn->lhs, asgn->op1);
+    else 
+      printf("v%d := v%d\n", asgn->lhs, asgn->op1);
+  }
+  else if (asgn->bin == 1) 
+  {
+    if (asgn->type == EQUAL)
+      printf("v%d := v%d = v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == PLUS)
+      printf("v%d := v%d + v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == MULT)
+      printf("v%d := v%d * v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == MINUS)
+      printf("v%d := v%d - v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == DIV)
+      printf("v%d := v%d / v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == MOD)
+      printf("v%d := v%d mod v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == LT)
+      printf("v%d := v%d < v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == GT)
+      printf("v%d := v%d > v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == LE)
+      printf("v%d := v%d <= v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == GE)
+      printf("v%d := v%d >= v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == LAND)
+      printf("v%d := v%d && v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+    else if (asgn->type == LOR)
+      printf("v%d := v%d || v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+  }
+  else if (asgn->bin == 2)
+  {
+    printf("call %s\n", asgn->fun);
+    if (strcmp(asgn->fun, "print") != 0)
+      printf("v%d := rv\n", asgn->lhs);
+  }
+}
+
+
+void print_interm(struct asgn_instr *asgn_root)
+{
+  struct asgn_instr *asgn = asgn_root;
+  while (asgn != NULL)
+  {
+    print_asgn(asgn);
+    asgn = asgn->next;
+  }
+}
+
+
 int main (int argc, char **argv) {
   int retval = yyparse();
   if (retval != 0) return 1;
   retval = visit_ast(getFunsAndVars);
   if (retval == 0) retval = visit_ast(typecheck);
   if (retval == 0) print_ast();      // run `dot -Tpdf ast.dot -o ast.pdf` to create a PDF
-  else printf("Semantic error\n");
-  
+  else 
+  {
+    printf("Semantic error\n");
+    return 1;
+  }
+  visit_ast(computeBrStructure);
+  current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
+  visit_ast(fillInstrs);
+  print_cfg(ifun_r, bb_root, asgn_root);
+  print_interm(asgn_root);
   clean_fun_str(&fun_r);
   clean_var_str(&var_r);
   free_ast();

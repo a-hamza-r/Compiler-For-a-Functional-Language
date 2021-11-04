@@ -18,11 +18,12 @@ void push_int (int i, struct node_int** r, struct node_int** t);
 int find_int(int c, struct node_int* r);
 void clean_int (struct node_int** r);
 int pop_int (struct node_int** r, struct node_int** t);
+int pop_int_front (struct node_int** r, struct node_int** t);
 int print_int(struct node_int* r);
 
 // data structure used for vars in symbol tables
-struct node_var_str { int begin_id; int end_id; int type; char* name; struct node_var_str* next; };
-void push_var_str (int begin_id, int end_id, int type, char* name, struct node_var_str** r, struct node_var_str** t);
+struct node_var_str { int begin_id; int end_id; int type; char* name; int reg_id; struct node_var_str* next; };
+void push_var_str (int begin_id, int end_id, int type, char* name, int reg_id, struct node_var_str** r, struct node_var_str** t);
 struct node_var_str* find_var_str(int loc_id, char* name, struct node_var_str* r);
 void clean_var_str(struct node_var_str** r);
 

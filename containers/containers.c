@@ -44,6 +44,21 @@ int pop_int(struct node_int** r, struct node_int** t) {
   return retval;                        //return retval
 }
 
+int pop_int_front(struct node_int** r, struct node_int** t) {
+  if ((*r)->next == NULL) {             //Check if next node is NULL - check for only one node
+    int retval = (*r)->id;              //Store the id of the current node in retval
+    free(*r);
+    *r = NULL;                          //Store current node to NULL
+    *t = NULL;
+    return retval;                      //return retval
+  }
+
+  int retval = (*r)->id;
+  (*r) = (*r)->next;
+
+  return retval;                        //return retval
+}
+
 int pop_ast(struct node_int** r, struct node_int** t) {
   if ((*r)->next == NULL) {             //Check if next node is NULL - check for only one node
     int retval = (*r)->id;              //Store the id of the current node in retval
@@ -75,13 +90,14 @@ int print_int(struct node_int* r){
   return 1;
 }
 
-void push_var_str (int begin_id, int end_id, int type, char* name, struct node_var_str** r, struct node_var_str** t){
+void push_var_str (int begin_id, int end_id, int type, char* name, int reg_id, struct node_var_str** r, struct node_var_str** t){
   if (*r == NULL){
     *r = (struct node_var_str*)malloc(sizeof(struct node_var_str)); //Create a new node
     (*r)->begin_id = begin_id;
     (*r)->end_id = end_id;
     (*r)->type = type;
     (*r)->name = name;
+    (*r)->reg_id = reg_id;
     (*r)->next = NULL;
     *t = *r;
   }
@@ -92,6 +108,7 @@ void push_var_str (int begin_id, int end_id, int type, char* name, struct node_v
     ptr->end_id = end_id;
     ptr->type = type;
     ptr->name = name;
+    ptr->reg_id = reg_id;
     ptr->next = NULL;
     (*t)->next = ptr;                                         //Set the node after tail
     *t = ptr;

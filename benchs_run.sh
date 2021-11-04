@@ -10,6 +10,7 @@ do
 	  ./comp < $f
     if [ "$1" = "good" ]; then 
       dot -Tpdf ast.dot -o testcases/$1/asts/$filename.pdf
+      dot -Tpdf cfg.dot -o testcases/$1/cfgs/$filename.pdf
     fi
   fi
 
