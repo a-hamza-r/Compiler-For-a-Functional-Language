@@ -595,5 +595,9 @@ int main (int argc, char **argv) {
   clean_var_str(&var_r);
   free_ast();
 
+  clean_istr(&ifun_r);
+  clean_bbs(&bb_root);
+  clean_asgns(&asgn_root);
+
   return retval;
 }
