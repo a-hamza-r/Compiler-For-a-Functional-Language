@@ -69,6 +69,7 @@ struct br_instr* find_br_instr(int id, struct br_instr* r)
   struct br_instr *r1 = r;
   while (r1 != NULL)
   {
+    printf("branch: bb%d, its cond: v%d, its succ1: bb%d, succ2: bb%d\n", r1->id, r1->cond, r1->succ1, r1->succ2);
     if (id == r1->id) return r1;
     r1 = r1->next;
   }
@@ -197,6 +198,7 @@ void print_cfg(struct node_istr* ifun_r, struct br_instr* bb_root, struct asgn_i
     if (asgn->bb != br->id){
       if (br->cond == 0){
         if (br->succ1 == -1) {
+          printf("in cfg print: br %d has node to exit\n", br->id);
           fprintf(fp, "%d [label=\"exit\"]\n", num);
           fprintf(fp, "%s -> %d\n", cur_name, num);
           num++;
@@ -223,6 +225,7 @@ void print_cfg(struct node_istr* ifun_r, struct br_instr* bb_root, struct asgn_i
   }
   fprintf(fp, "%d [label=\"exit\"]\n", num);
   fprintf(fp, "%s -> %d\n", cur_name, num);
+  printf("in cfg print: br %d has node to exit\n", br->id);
   fprintf(fp, "}\n ");
   fclose(fp);
   system("dot -Tpdf cfg.dot -o cfg.pdf");
