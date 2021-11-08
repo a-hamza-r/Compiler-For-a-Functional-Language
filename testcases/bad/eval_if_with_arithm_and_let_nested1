@@ -1,1 +1,0 @@
-(eval (if (= 2 var123var) (if (not (= var1 var2)) (> 101 var1) (< var1 var234)) (+ (let (var234 1) (div 1 2)) (- 1 2))))
