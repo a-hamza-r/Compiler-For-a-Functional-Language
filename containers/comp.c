@@ -473,18 +473,15 @@ int fillInstrs(struct ast* node)
       struct br_instr* b = find_br_instr(current_bb_for_instrs, bb_root);
       if (b != NULL)
       {
-        printf("current branch: bb%d, its cond: v%d, its succ1: bb%d, succ2: bb%d\n", b->id, b->cond, b->succ1, b->succ2);
         b->cond = node->id;
       }
       current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
     }
     else 
     {
-      printf("processing second/third child with current bb: %d\n", current_bb_for_instrs);
       struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, node->id, -1);
       push_asgn(asgn, &asgn_root, &asgn_tail);
       current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
-      printf("processing second/third child with current bb: %d\n", current_bb_for_instrs);
     }
   }
   return 0;
@@ -572,7 +569,7 @@ void print_interm(struct asgn_instr *asgn_root)
       if (br == NULL) return;
       char* fun_name = find_istr(ifun_r, br->id);
       if (fun_name != NULL){
-        printf("function %s", fun_name);
+        printf("function %s\n", fun_name);
       } else {
         printf("bb%d\n", br->id);
       }
