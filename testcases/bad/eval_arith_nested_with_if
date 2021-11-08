@@ -1,1 +1,0 @@
-(eval (div (+ var var2) (if (= var3 0) (mod 23 340) (> var2 var0var))))

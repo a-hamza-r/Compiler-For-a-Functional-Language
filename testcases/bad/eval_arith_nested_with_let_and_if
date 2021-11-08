@@ -1,1 +1,0 @@
-(eval (div (let (1 100) (+ a (if false 1 0))) (if (= var3 0) (mod 23 340) (- var1 20))))
