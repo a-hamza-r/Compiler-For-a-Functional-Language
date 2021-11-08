@@ -1,1 +1,1 @@
-(eval (let (var0var 100) (div (let (var 190) (+ var (let (var2 (+ (get-int) (mod 1 2))) var2))) 2)))
+(eval (let (var0var 100) (>= (let (var 190) (+ var (let (var2 (+ (get-int) (mod 1 2))) var2))) 2)))

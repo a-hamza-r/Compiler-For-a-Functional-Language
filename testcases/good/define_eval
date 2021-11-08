@@ -1,4 +1,4 @@
-(define-fun (varfun (int var) (bool var2) (int var3)) int (+ var var3))
+(define-fun (varfun (int var) (bool var2) (int var3)) bool (and (= var var3) (or (> var3 1) var2)))
 (define-fun (varfun2 (bool var) (bool var2) (int var3)) bool (= 1 (div 3 (if var (* var3 2) 1))))
 (define-fun (func (int var) (bool var2) (int var10) (bool var11)) int (+ 1 (div 3 (if (if true (= 1 2) (and true false)) (* var10 2) 1))))
 ; (eval (f))

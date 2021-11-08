@@ -1,2 +1,2 @@
 ; comments should be ignored
-(eval (get-int))
+(eval (get-bool))

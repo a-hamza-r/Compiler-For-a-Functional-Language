@@ -1,2 +1,2 @@
-(define-fun (f) int (+ (get-int) (get-int)))
-(eval (* 1 1 (f)))
+(define-fun (f) bool (< (get-int) (get-int)))
+(eval (and true (= (get-int) (get-int)) (f)))

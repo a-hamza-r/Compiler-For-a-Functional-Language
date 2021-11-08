@@ -146,7 +146,7 @@ int typecheck(struct ast* node)
     }
   }
   // handle operations that have all children as flas
-  else if (node->ntoken == NOT || node->ntoken == LAND || node->ntoken == LOR)
+  if (node->ntoken == NOT || node->ntoken == LAND || node->ntoken == LOR)
   {
     struct ast_child *child = node->child;
     while (child != NULL)
@@ -156,14 +156,14 @@ int typecheck(struct ast* node)
     }
   }
   // handle if-statement
-  else if (node->ntoken == IF)
+  if (node->ntoken == IF)
   {
     return !(isFla(get_child(node, 1)) == 0 && 
       ((isTerm(get_child(node, 2)) == 0 && isTerm(get_child(node, 3)) == 0) || 
       (isFla(get_child(node, 2)) == 0 && isFla(get_child(node, 3)) == 0)));
   }
   // handle variable use
-  else if (node->ntoken == VARID)
+  if (node->ntoken == VARID)
   {
     if (find_var_str(node->id, node->token, var_r) == NULL)
     {
@@ -172,7 +172,7 @@ int typecheck(struct ast* node)
     }
   }
   // handle function calls
-  else if (node->ntoken == CALL)
+  if (node->ntoken == CALL)
   {
     struct node_fun_str* info = find_fun_str(node->token, fun_r);
     if (info == NULL)
@@ -199,7 +199,7 @@ int typecheck(struct ast* node)
     }
   }
   // check the return type of a declared function
-  else if (node->ntoken == DEFFUN)
+  if (node->ntoken == DEFFUN)
   {
     char *funcName = node->child->id->token;
     struct ast* lastChild = get_child(node, get_child_num(node));
@@ -217,6 +217,16 @@ int typecheck(struct ast* node)
     if (find_fun_str(node->token, fun_r) != NULL)
     {
       printf("variable %s is declared as a function\n", node->token);
+      return 1;
+    }
+  }
+
+  // extra contraint for program analyzer of logic formulas
+  if (node->ntoken == EVAL)
+  {
+    if (isFla(get_child(node, 1)) == 1)
+    {
+      printf("'eval' should only be called on formulas\n");
       return 1;
     }
   }
@@ -576,6 +586,39 @@ void print_interm(struct asgn_instr *asgn_root)
 }
 
 
+void print_interm_smt(struct asgn_instr *asgn_root)
+{
+  struct asgn_instr* asgn = asgn_root;
+  struct br_instr* br = bb_root;
+  printf("bb%d\n", br->id);
+
+  while (asgn != NULL){
+    if (asgn->bb != br->id){
+      if (br->cond == 0){
+        if (br->succ1 == -1) {
+          printf("br exit\n\n");
+        }
+        else printf("br bb%d\n\n", br->succ1);
+      }
+      else printf("br v%d bb%d bb%d\n\n", br->cond, br->succ1, br->succ2);
+      br = br->next;
+      if (br == NULL) return;
+      char* fun_name = find_istr(ifun_r, br->id);
+      if (fun_name != NULL){
+        printf("function %s", fun_name);
+      } else {
+        printf("bb%d\n", br->id);
+      }
+    }
+    if (asgn->bb == br->id) {
+      print_asgn(asgn);
+      asgn = asgn->next;
+    }
+  }
+  printf("br exit\n\n");
+}
+
+
 int main (int argc, char **argv) {
   int retval = yyparse();
   if (retval != 0) return 1;
@@ -591,6 +634,8 @@ int main (int argc, char **argv) {
   visit_ast(fillInstrs);
   print_cfg(ifun_r, bb_root, asgn_root);
   print_interm(asgn_root);
+  print_interm_smt(asgn_root);
+
   clean_fun_str(&fun_r);
   clean_var_str(&var_r);
   free_ast();

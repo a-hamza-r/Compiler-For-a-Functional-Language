@@ -1,0 +1,1 @@
+(eval (not (or (> (get-int) 1) (get-bool))))

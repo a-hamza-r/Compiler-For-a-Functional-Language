@@ -1,1 +1,1 @@
-(eval (let (var1 (get-int)) (- (let (var2 var1) (+ (let (var 100) var) var2 var2)) var1)))
+(eval (let (var1 (get-int)) (not (= (let (var2 var1) (+ (let (var 100) var) var2 var2)) var1))))
