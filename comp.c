@@ -1,6 +1,6 @@
 #include <stdio.h>
-#include "../y.tab.h"
-#include "containers.h"
+#include "y.tab.h"
+#include "containers/containers.h"
 
 int yyparse();
 int isFla(struct ast*);
@@ -12,7 +12,7 @@ struct node_var_str* var_r = NULL;
 struct node_var_str* var_t = NULL;
 
 // get function and variable declarations
-int getFunsAndVars(struct ast* node)
+int get_funs_and_vars(struct ast* node)
 {
   // function declarations
   if (node->ntoken == DEFFUN)
@@ -66,7 +66,7 @@ int getFunsAndVars(struct ast* node)
 int isTerm(struct ast *node)
 {
   int arr[] = {CONST, GETINT, PLUS, MINUS, MULT, DIV, MOD}; 
-  for (u_int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
+  for (unsigned int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF) 
@@ -91,7 +91,7 @@ int isTerm(struct ast *node)
 int isFla(struct ast *node)
 {
   int arr[] = {TRUE, FALSE, GETBOOL, EQUAL, LT, GT, LE, GE, NOT, LAND, LOR};
-  for (u_int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
+  for (unsigned int i = 0; i < sizeof(arr)/sizeof(arr[0]); i++)
     if (node->ntoken == arr[i]) return 0;
 
   if (node->ntoken == IF)
@@ -208,14 +208,10 @@ int typecheck(struct ast* node)
 int main (int argc, char **argv) {
   int retval = yyparse();
   if (retval != 0) return 1;
-  retval = visit_ast(getFunsAndVars);
+  retval = visit_ast(get_funs_and_vars);
   if (retval == 0) retval = visit_ast(typecheck);
   if (retval == 0) print_ast();      // run `dot -Tpdf ast.dot -o ast.pdf` to create a PDF
   else printf("Semantic error\n");
-  
-  clean_fun_str(&fun_r);
-  clean_var_str(&var_r);
   free_ast();
-
   return retval;
 }
