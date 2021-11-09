@@ -6,3 +6,7 @@ lex.yy.c
 comp
 *.dot
 tags
+testcases/good/asts
+testcases/good/cfgs
+ast.pdf
+cfg.pdf
