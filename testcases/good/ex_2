@@ -1,0 +1,3 @@
+(define-fun (f1 (int i)) int (+ i 1))
+(define-fun (f2 (int i)) bool (= (f1 i) (f1 i)))
+(eval (f2 (get-int)))
