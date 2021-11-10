@@ -1,4 +1,5 @@
+(define-fun (f1 (int c)) int c)
 (define-fun (f (int b) (int i)) int
  (if (= i b) (get-int) (+ i 8)))
 ; comments should be ignored
-(eval (f (get-int) (get-int)))
+(eval (f (f1 2) (get-int)))
