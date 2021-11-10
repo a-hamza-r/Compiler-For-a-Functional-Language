@@ -41,7 +41,7 @@ prog : LPAR DEFFUN LPAR funid args RPAR typefun expr RPAR prog { // function dec
 	}
   | LPAR EVAL expr RPAR {                             // eval 
     insert_child($3);
-    insert_node("ENTRY", EVAL);
+    insert_node("ENTRY", CALL);
   }
 ;
 args : LPAR INT intdecl RPAR args { push_int($3, &tmp_r, &tmp_t); $$ = $5+1; }  // args functions
@@ -53,8 +53,8 @@ typefun : INT { $$ = insert_node("ret INT", INT); }   // int type function
 ;
 expr : CONST { $$ = insert_node($1, CONST); }         // numbers
   | IDENTIFIER { $$ = insert_node($1, VARID); }       // variables
-  | TRUE { $$ = insert_node($1, TRUE); }              // true 
-  | FALSE { $$ = insert_node($1, FALSE); }            // false
+  | TRUE { $$ = insert_node($1, CONST); }              // true 
+  | FALSE { $$ = insert_node($1, CONST); }            // false
   | LPAR IDENTIFIER exprs RPAR {                      // function call
     for (u_int i = 0; i < $3; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));
