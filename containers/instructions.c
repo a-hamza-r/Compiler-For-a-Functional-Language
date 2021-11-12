@@ -149,10 +149,12 @@ struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int lhs_type, int type){
   return tmp;
 }
 
-struct asgn_instr* mk_casgn(int bb, int lhs, char* fun){
+struct asgn_instr* mk_casgn(int bb, int lhs, int op, int lhs_type, char* fun){
   struct asgn_instr* tmp = (struct asgn_instr*)malloc(sizeof(struct asgn_instr));
   tmp->bb = bb;
   tmp->lhs = lhs;
+  tmp->op1 = op;
+  tmp->lhs_type = lhs_type;
   tmp->bin = 2;
   tmp->fun = fun;
   tmp->next = NULL;

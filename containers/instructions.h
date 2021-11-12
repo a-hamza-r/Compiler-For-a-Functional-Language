@@ -33,7 +33,7 @@ struct asgn_instr {int bb; int lhs; int bin; int op1; int op2; int type; int lhs
 struct asgn_instr* mk_asgn(int bb, int lhs, int bin, int op1, int op2, int lhs_type, int type);
 struct asgn_instr* mk_basgn(int bb, int lhs, int op1, int op2, int lhs_type, int type);
 struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int lhs_type, int type);
-struct asgn_instr* mk_casgn(int bb, int lhs, char* fun);
+struct asgn_instr* mk_casgn(int bb, int lhs, int op, int lhs_type, char* fun);
 void push_asgn (struct asgn_instr* i, struct asgn_instr** r, struct asgn_instr** t);
 void rm_asgn (struct asgn_instr* i, struct asgn_instr** r, struct asgn_instr** t);
 void clean_asgns (struct asgn_instr** r);

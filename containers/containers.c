@@ -121,8 +121,7 @@ void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, s
     (*r)->name = name;
     (*r)->type = type;
     (*r)->argTypes = argTypes;
-    (*r)->start = NULL;
-    (*r)->end = NULL;
+    (*r)->definefun = NULL;
     (*r)->instrs = NULL;
     (*r)->next = NULL;
     (*r)->arity = arity;
@@ -134,8 +133,7 @@ void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, s
     ptr->type = type;
     ptr->name = name;
     ptr->argTypes = argTypes;
-    ptr->start = NULL;
-    ptr->end = NULL;
+    ptr->definefun = NULL;
     ptr->arity = arity;
     ptr->instrs = NULL;
     ptr->next = NULL;
@@ -274,6 +272,15 @@ int get_child_num(struct ast* ast_node){
 int visit_ast(int (*f)(struct ast* ast_node)){
   struct ast* temp_root = ast_list_root;
   while(temp_root != NULL){
+    if (f (temp_root) != 0) return 1;
+    temp_root = temp_root->next;
+  }
+  return 0;
+}
+
+int visit_ast_interm(int (*f)(struct ast* ast_node), struct ast* ast_start, struct ast* ast_end){
+  struct ast* temp_root = ast_start;
+  while(temp_root->id <= ast_end->id){
     if (f (temp_root) != 0) return 1;
     temp_root = temp_root->next;
   }

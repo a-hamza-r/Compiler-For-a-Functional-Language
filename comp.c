@@ -35,8 +35,10 @@ bool foundEntry = false;
 
 int total_assert_blocks = 0;
 
-int retun_val_counter = 0;
-int args_counter = 0;
+int return_val_counter = 0;
+int args_counter = 1;
+int total_nodes = 0;
+int current_copy = 1;
 
 // get function and variable declarations
 int get_funs_and_vars(struct ast* node)
@@ -158,26 +160,13 @@ void procRec(struct ast* node)
   }
   else if (node->ntoken == CALL)
   {
-    push_int(assert_num_tail->id+1, &assert_num_root, &assert_num_tail);
     struct node_fun_str* f = find_fun_str(node->token, fun_r);
     int numChild = get_child_num(node);
     for (int i = 1; i <= numChild; i++)
       procRec(get_child(node, i));
-    procRec(f->end);
-    /*struct ast* temp = f->start;
-    while (temp->id <= f->end->id)
-    {
-      printf("func tokens: %s\n", temp->token);
-      temp = temp->next;
-    }
-    */
-    /* struct asgn_instr* instrs = f->instrs;
-    while (instrs != NULL)
-    {
-      print_asgn_smt(instrs);
-      instrs = instrs->next;
-    }
-    */
+    struct ast* deffun = f->definefun;
+    struct ast* lastChild = get_child(deffun, get_child_num(deffun));
+    procRec(lastChild);
   }
   else 
   {
@@ -303,23 +292,43 @@ int fill_instrs(struct ast* node)
   {
     int lhs = node->id;
     char *tok = node->token;
-    asgn = mk_casgn(current_assert, lhs, tok);
+    asgn = mk_casgn(current_assert, lhs, return_val_counter++, (node->ntoken == GETINT) ? INT : BOOL, tok);
     push_asgn(asgn, &current->asgn_r, &current->asgn_t);
   }
-  /*
   if (node->ntoken == CALL && strcmp(node->token, "ENTRY") != 0)
   {
+    int add = total_nodes*current_copy++;
     for (int i = 1; i <= get_child_num(node); i++)
     {
-      asgn = mk_uasgn(current_assert, -i, get_child(node, i)->id, -1);
+      struct ast* c = get_child(node, i);
+      int op1 = get_register_val(c);
+      asgn = mk_uasgn(current_assert, -args_counter, op1, (isFla(c) == 0) ? BOOL : INT, -1);
       push_asgn(asgn, &current->asgn_r, &current->asgn_t);
     }
+    struct node_fun_str* f = find_fun_str(node->token, fun_r);
+    struct ast* deffun = f->definefun;
+    
+    struct node_int* types = f->argTypes;
+    for (int i = 1; i <= f->arity; i++)
+    {
+      struct ast* childNode = get_child(deffun, i+1);
+      int lhs = childNode->id, op1 = -args_counter++;
+      struct asgn_instr *asgn = mk_uasgn(current_assert, lhs, op1, (types->id == INTDECL) ? INT : BOOL, -1);
+      push_asgn(asgn, &current->asgn_r, &current->asgn_t);
+      struct node_var_str* v = find_var_str(childNode->id, childNode->token, var_r);
+      v->reg_id = lhs;
+      types = types->next;
+    }
+    struct ast* secondLastChild = get_child(deffun, get_child_num(deffun)-1);
+    struct ast* lastChild = get_child(deffun, get_child_num(deffun));
+    lastChild->parent = NULL;
+    visit_ast_interm(fill_instrs, secondLastChild->next, lastChild);
+    
     int lhs = node->id;
     char *tok = node->token;
-    asgn = mk_casgn(current_assert, lhs, tok);
+    asgn = mk_casgn(current_assert, lhs, return_val_counter++, f->type, tok);
     push_asgn(asgn, &current->asgn_r, &current->asgn_t);
   }
-  */
   if (node->ntoken == LET)
   {
     int lhs = node->id;
@@ -350,19 +359,6 @@ int fill_instrs(struct ast* node)
         push_asgn(asgn, &current->asgn_r, &current->asgn_t);
       }
     }
-    // if last child of define-fun, assign rv to its associated register
-    /*
-    if (parent->ntoken == DEFFUN)
-    {
-      struct ast* lastChild = get_child(parent, get_child_num(parent));
-      if (node->id == lastChild->id)
-      {
-        int op1 = get_register_val(lastChild);
-        asgn = mk_uasgn(current_assert, 0, op1, lastChild->ntoken);
-        push_asgn(asgn, &current->asgn_r, &current->asgn_t);
-      }
-    }
-    */
     if (parent->ntoken == IF)
     {
       struct ast* firstChild = get_child(parent, 1);
@@ -400,24 +396,6 @@ int fill_instrs(struct ast* node)
     }
   }
 
-  /*
-  if (node->ntoken == FUNID)
-  {
-    //current_bb_for_instrs = pop_int_front(&assert_num_root, &assert_num_tail);
-    struct ast* parent = node->parent;
-    char *funcName = node->token;
-    struct node_fun_str* info = find_fun_str(funcName, fun_r);
-    for (int i = 1; i <= info->arity; i++)
-    {
-      struct ast* childNode = get_child(parent, i+1);
-      int lhs = childNode->id, op1 = -i;
-      struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, -1);
-      push_asgn(asgn, &asgn_root, &asgn_tail);
-      //struct node_var_str* v = find_var_str(childNode->id, childNode->token, var_r);
-      //v->reg_id = lhs;
-    }
-  }
-  */
   return 0;
 }
 
@@ -440,7 +418,7 @@ void print_asgn_smt(struct asgn_instr *asgn)
     else if (asgn->op1 < 0)
       printf("(= v%d a%d)\n", asgn->lhs, -asgn->op1);
     else if (asgn->lhs == 0)
-      printf("(= rv v%d)\n", asgn->op1);
+      printf("(= rv%d v%d)\n", return_val_counter++, asgn->op1);
     else if (asgn->lhs < 0)
       printf("(= a%d v%d)\n", -asgn->lhs, asgn->op1);
     else 
@@ -477,21 +455,40 @@ void print_asgn_smt(struct asgn_instr *asgn)
   {
     //printf("call %s\n", asgn->fun);
     if (strcmp(asgn->fun, "print") != 0)
-      printf("(= v%d rv%d)\n", asgn->lhs, retun_val_counter++);
+      printf("(= v%d rv%d)\n", asgn->lhs, asgn->op1);
   }
 }
 
 void print_asgndecl_smt(struct asgn_instr *asgn)
 {
-  if (asgn->bin != 2) 
+  if (asgn->bin < 2) 
   {
     if (asgn->lhs_type == INT)
     {
-      printf("(declare-var v%d Int)\n", asgn->lhs);
+      if (asgn->lhs < 0)
+        printf("(declare-var a%d Int)\n", -asgn->lhs);
+      else 
+        printf("(declare-var v%d Int)\n", asgn->lhs);
     }
     else if (asgn->lhs_type == BOOL)
     {
-      printf("(declare-var v%d Bool)\n", asgn->lhs);
+      if (asgn->lhs < 0)
+        printf("(declare-var a%d Bool)\n", -asgn->lhs);
+      else 
+        printf("(declare-var v%d Bool)\n", asgn->lhs);
+    }
+  }
+  else 
+  {
+    if (asgn->lhs_type == INT) 
+    {
+        printf("(declare-var v%d Int)\n", asgn->lhs);
+        printf("(declare-var rv%d Int)\n", asgn->op1);
+    }
+    else 
+    {
+        printf("(declare-var v%d Bool)\n", asgn->lhs);
+        printf("(declare-var rv%d Bool)\n", asgn->op1);
     }
   }
 }
@@ -547,14 +544,12 @@ void print_decls_smt(struct asgn_instr *asgn_root)
 
 int compute_functions(struct ast* node)
 {
+  total_nodes++;
   if (node->ntoken == DEFFUN)
   {
-    struct ast* lastChild = get_child(node, get_child_num(node));
-    struct ast* secondLastChild = get_child(node, get_child_num(node)-1);
     char *funcName = get_child(node, 1)->token;
     struct node_fun_str* info = find_fun_str(funcName, fun_r);
-    info->start = secondLastChild->next;
-    info->end = lastChild;
+    info->definefun = node;
     /* 
     struct asgn_instr *instrs_root, *instrs_tail;
     struct asgn_instr *asgn;
