@@ -7,6 +7,41 @@
 
 #include "instructions.h"
 
+void push_asgn_instr_r_t (struct asgn_instr* asgn_r, struct asgn_instr* asgn_t, struct asgn_instr_r_t** r, struct asgn_instr_r_t** t){
+  if (*r == NULL) {                          //If root node is null
+    *r = (struct asgn_instr_r_t*)malloc(sizeof(struct asgn_instr_r_t)); //Create a new node
+    (*r)->asgn_r = asgn_r;                         
+    (*r)->asgn_t = asgn_t;                         
+    (*r)->cond = -1;                         
+    (*r)->neg = 0;                         
+    (*r)->next = NULL;                                      //set next pointer to null
+    *t = *r;                                                //Set tail pointer == root pointer
+  }
+  else {                                    //If root node is not null
+    struct asgn_instr_r_t* ptr;
+    ptr = (struct asgn_instr_r_t*)malloc(sizeof(struct asgn_instr_r_t));  //Create a temporary node
+    ptr->asgn_r = asgn_r;                         
+    ptr->asgn_t = asgn_t;
+    ptr->cond = -1;                         
+    ptr->neg = 0;                         
+    ptr->next = NULL;                                         //Set next pointer to NULL
+    (*t)->next = ptr;                                         //Set the node after tail
+    *t = ptr;                                                 //Set tail as the new pointer
+  }
+}
+
+struct asgn_instr_r_t* get(struct asgn_instr_r_t* r, int i)
+{
+  struct asgn_instr_r_t* temp = r;
+  int count = 0;
+  while (count <= i)
+  {
+    if (count == i) return temp;
+    count++;
+    temp = temp->next;
+  }
+}
+
 void push_istr (int c1, char* c2, struct node_istr** r, struct node_istr** t){
   if (*r == NULL) {                          //If root node is null
     *r = (struct node_istr*)malloc(sizeof(struct node_istr)); //Create a new node
@@ -75,7 +110,7 @@ struct br_instr* find_br_instr(int id, struct br_instr* r)
   return NULL;
 }
 
-struct asgn_instr* mk_asgn(int bb, int lhs, int bin, int op1, int op2, int type){
+struct asgn_instr* mk_asgn(int bb, int lhs, int bin, int op1, int op2, int lhs_type, int type){
   struct asgn_instr* tmp = (struct asgn_instr*)malloc(sizeof(struct asgn_instr));
   tmp->bb = bb;
   tmp->bin = bin;
@@ -83,23 +118,25 @@ struct asgn_instr* mk_asgn(int bb, int lhs, int bin, int op1, int op2, int type)
   tmp->op1 = op1;
   tmp->op2 = op2;
   tmp->type = type;
+  tmp->lhs_type = lhs_type;
   tmp->next = NULL;
   return tmp;
 }
 
-struct asgn_instr* mk_basgn(int bb, int lhs, int op1, int op2, int type){
+struct asgn_instr* mk_basgn(int bb, int lhs, int op1, int op2, int lhs_type, int type){
   struct asgn_instr* tmp = (struct asgn_instr*)malloc(sizeof(struct asgn_instr));
   tmp->bb = bb;
   tmp->lhs = lhs;
   tmp->bin = 1;
   tmp->op1 = op1;
   tmp->op2 = op2;
+  tmp->lhs_type = lhs_type;
   tmp->type = type;
   tmp->next = NULL;
   return tmp;
 }
 
-struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int type){
+struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int lhs_type, int type){
   struct asgn_instr* tmp = (struct asgn_instr*)malloc(sizeof(struct asgn_instr));
   tmp->bb = bb;
   tmp->lhs = lhs;
@@ -107,6 +144,7 @@ struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int type){
   tmp->op1 = op;
   tmp->op2 = -1;
   tmp->type = type;
+  tmp->lhs_type = lhs_type;
   tmp->next = NULL;
   return tmp;
 }

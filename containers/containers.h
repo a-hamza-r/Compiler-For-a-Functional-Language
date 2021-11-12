@@ -28,7 +28,7 @@ struct node_var_str* find_var_str(int loc_id, char* name, struct node_var_str* r
 void clean_var_str(struct node_var_str** r);
 
 // data structure used for funs in symbol tables
-struct node_fun_str { char* name; int type; int arity; struct node_int* argTypes; struct node_fun_str* next; };
+struct node_fun_str { char* name; int type; int arity; struct node_int* argTypes; struct asgn_instr* instrs; struct ast* start; struct ast* end; struct node_fun_str* next; };
 void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, struct node_fun_str** r, struct node_fun_str** t);
 struct node_fun_str* find_fun_str(char* name, struct node_fun_str* r);
 void clean_fun_str(struct node_fun_str** r);

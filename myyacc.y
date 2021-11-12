@@ -53,8 +53,8 @@ typefun : INT { $$ = insert_node("ret INT", INT); }   // int type function
 ;
 expr : CONST { $$ = insert_node($1, CONST); }         // numbers
   | IDENTIFIER { $$ = insert_node($1, VARID); }       // variables
-  | TRUE { $$ = insert_node($1, CONST); }              // true 
-  | FALSE { $$ = insert_node($1, CONST); }            // false
+  | TRUE { $$ = insert_node($1, TRUE); }              // true 
+  | FALSE { $$ = insert_node($1, FALSE); }            // false
   | LPAR IDENTIFIER exprs RPAR {                      // function call
     for (u_int i = 0; i < $3; i++)
       insert_child(pop_int(&tmp_r, &tmp_t));

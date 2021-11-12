@@ -121,6 +121,9 @@ void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, s
     (*r)->name = name;
     (*r)->type = type;
     (*r)->argTypes = argTypes;
+    (*r)->start = NULL;
+    (*r)->end = NULL;
+    (*r)->instrs = NULL;
     (*r)->next = NULL;
     (*r)->arity = arity;
     *t = *r;
@@ -128,10 +131,13 @@ void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, s
   else {
     struct node_fun_str* ptr;
     ptr = (struct node_fun_str*)malloc(sizeof(struct node_fun_str));  //Create a temporary node
-    ptr->argTypes = argTypes;
     ptr->type = type;
     ptr->name = name;
+    ptr->argTypes = argTypes;
+    ptr->start = NULL;
+    ptr->end = NULL;
     ptr->arity = arity;
+    ptr->instrs = NULL;
     ptr->next = NULL;
     (*t)->next = ptr;                                         //Set the node after tail
     *t = ptr;
@@ -293,9 +299,9 @@ void clean_fun_str(struct node_fun_str** r){
 FILE *fp;
 int print(struct ast* temp_root) {
   if (! temp_root->is_leaf){
-    fprintf(fp, "%d [label=\"%s\", fontname=\"monospace\", style=filled, fillcolor=mintcream];\n ", temp_root->id, temp_root->token);
+    fprintf(fp, "%d [label=\"%s:%d\", fontname=\"monospace\", style=filled, fillcolor=mintcream];\n ", temp_root->id, temp_root->token, temp_root->id);
   } else {
-    fprintf(fp, "%d [label=\"%s\", fontname=\"monospace\"];\n ", temp_root->id, temp_root->token);
+    fprintf(fp, "%d [label=\"%s:%d\", fontname=\"monospace\"];\n ", temp_root->id, temp_root->token, temp_root->id);
   }
   if (temp_root->child != NULL){
     struct ast_child* temp_ast_child_root = temp_root->child;
