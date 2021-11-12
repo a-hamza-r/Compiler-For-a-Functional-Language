@@ -36,6 +36,7 @@ bool foundEntry = false;
 int total_assert_blocks = 0;
 
 int retun_val_counter = 0;
+int args_counter = 0;
 
 // get function and variable declarations
 int get_funs_and_vars(struct ast* node)
@@ -280,7 +281,7 @@ int fill_instrs(struct ast* node)
     {
       struct ast* currChild = get_child(node, i);
       op2 = get_register_val(currChild);
-      asgn = mk_basgn(current_assert, lhs, op1, op2, type, node->ntoken);
+      asgn = mk_basgn(current_assert, lhs, op1, op2, 999, node->ntoken);
       push_asgn(asgn, &current->asgn_r, &current->asgn_t);
 
       op1 = lhs;
@@ -366,14 +367,22 @@ int fill_instrs(struct ast* node)
     {
       struct ast* firstChild = get_child(parent, 1);
       struct ast* secondChild = get_child(parent, 2);
+      struct ast* thirdChild = get_child(parent, 3);
       int type = (isFla(secondChild) == 0) ? BOOL : INT;
       if (node->id == firstChild->id)
       {
+        if (node->ntoken == VARID)
+        {
+          int op1 = get_register_val(firstChild);
+          asgn = mk_uasgn(current_assert, node->id, op1, BOOL, -1);
+          push_asgn(asgn, &current->asgn_r, &current->asgn_t);
+        }
         current_assert = pop_int_front(&assert_num_root, &assert_num_tail);
       }
       else if (node->id == secondChild->id)
       {
-        asgn = mk_uasgn(current_assert, parent->id, node->id, type, -1);
+        int op1 = get_register_val(secondChild);
+        asgn = mk_uasgn(current_assert, parent->id, op1, type, -1);
         push_asgn(asgn, &current->asgn_r, &current->asgn_t);
         current->cond = firstChild->id;
         current->neg = 1;
@@ -381,7 +390,8 @@ int fill_instrs(struct ast* node)
       }
       else
       {
-        asgn = mk_uasgn(current_assert, parent->id, node->id, 999, -1);
+        int op1 = get_register_val(thirdChild);
+        asgn = mk_uasgn(current_assert, parent->id, op1, 999, -1);
         push_asgn(asgn, &current->asgn_r, &current->asgn_t);
         current->cond = firstChild->id;
         current->neg = -1;
