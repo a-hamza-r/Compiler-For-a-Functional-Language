@@ -228,19 +228,19 @@ int fill_instrs(struct ast* node)
   {
     int numChild = get_child_num(node);
     struct ast* c1 = get_child(node, 1);
-    int op1 = get_register_val(c1), op2;
+    int op1 = c1->id, op2;
     int lhs = node->id;
     for (int i = 2; i < numChild; i++)
     {
       struct ast* currChild = get_child(node, i);
-      op2 = get_register_val(currChild);
+      op2 = currChild->id;
       struct asgn_instr *asgn = mk_basgn(current_bb_for_instrs, lhs, op1, op2, node->ntoken);
       push_asgn(asgn, &asgn_root, &asgn_tail);
 
       op1 = lhs;
     }
     struct ast* currChild = get_child(node, numChild);
-    op2 = get_register_val(currChild);
+    op2 = currChild->id;
     struct asgn_instr *asgn = mk_basgn(current_bb_for_instrs, lhs, op1, op2, node->ntoken);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
@@ -258,8 +258,14 @@ int fill_instrs(struct ast* node)
   {
     int lhs = node->id;
     struct ast* c1 = get_child(node, 1);
-    int op1 = get_register_val(c1);
+    int op1 = c1->id;
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, node->ntoken);
+    push_asgn(asgn, &asgn_root, &asgn_tail);
+  }
+  if (node->ntoken == VARID)
+  {
+    struct node_var_str* v = find_var_str(node->id, node->token, var_r);
+    struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, node->id, v->reg_id, -1);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
   if (node->ntoken == GETINT || node->ntoken == GETBOOL || node->ntoken == CALL)
@@ -298,7 +304,7 @@ int fill_instrs(struct ast* node)
   {
     int lhs = node->id;
     struct ast* thirdChild = get_child(node, 3);
-    int op1 = get_register_val(thirdChild);
+    int op1 = thirdChild->id;
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, -1);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
@@ -314,7 +320,7 @@ int fill_instrs(struct ast* node)
         int lhs = firstChild->id;
         struct node_var_str* v = find_var_str(firstChild->id, firstChild->token, var_r);
         v->reg_id = lhs;
-        int op1 = get_register_val(secondChild);
+        int op1 = secondChild->id;
         struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, -1);
         push_asgn(asgn, &asgn_root, &asgn_tail);
       }
@@ -325,7 +331,7 @@ int fill_instrs(struct ast* node)
       struct ast* lastChild = get_child(parent, get_child_num(parent));
       if (node->id == lastChild->id)
       {
-        int op1 = get_register_val(lastChild);
+        int op1 = lastChild->id;
         struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, 0, op1, lastChild->ntoken);
         push_asgn(asgn, &asgn_root, &asgn_tail);
       }

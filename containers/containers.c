@@ -293,9 +293,9 @@ void clean_fun_str(struct node_fun_str** r){
 FILE *fp;
 int print(struct ast* temp_root) {
   if (! temp_root->is_leaf){
-    fprintf(fp, "%d [label=\"%s\", fontname=\"monospace\", style=filled, fillcolor=mintcream];\n ", temp_root->id, temp_root->token);
+    fprintf(fp, "%d [label=\"%s: %d\", fontname=\"monospace\", style=filled, fillcolor=mintcream];\n ", temp_root->id, temp_root->token, temp_root->id);
   } else {
-    fprintf(fp, "%d [label=\"%s\", fontname=\"monospace\"];\n ", temp_root->id, temp_root->token);
+    fprintf(fp, "%d [label=\"%s: %d\", fontname=\"monospace\"];\n ", temp_root->id, temp_root->token, temp_root->id);
   }
   if (temp_root->child != NULL){
     struct ast_child* temp_ast_child_root = temp_root->child;
