@@ -265,13 +265,12 @@ int fill_instrs(struct ast* node)
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, node->ntoken);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
-  /*if (node->ntoken == VARID)
+  if (node->ntoken == VARID)
   {
     struct node_var_str* v = find_var_str(node->id, node->token, var_r);
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, node->id, v->reg_id, -1);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
-  */
   if (node->ntoken == GETINT || node->ntoken == GETBOOL || node->ntoken == CALL)
   {
     if (node->ntoken == CALL)
@@ -351,8 +350,7 @@ int fill_instrs(struct ast* node)
       }
       else 
       {
-        int op1 = get_register_val(node);
-        struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, op1, -1);
+        struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, node->id, -1);
         push_asgn(asgn, &asgn_root, &asgn_tail);
         current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
       }
