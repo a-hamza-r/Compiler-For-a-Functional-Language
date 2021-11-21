@@ -265,12 +265,13 @@ int fill_instrs(struct ast* node)
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, lhs, op1, node->ntoken);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
-  if (node->ntoken == VARID)
+  /*if (node->ntoken == VARID)
   {
     struct node_var_str* v = find_var_str(node->id, node->token, var_r);
     struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, node->id, v->reg_id, -1);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
+  */
   if (node->ntoken == GETINT || node->ntoken == GETBOOL || node->ntoken == CALL)
   {
     if (node->ntoken == CALL)
@@ -342,7 +343,6 @@ int fill_instrs(struct ast* node)
     if (parent->ntoken == IF)
     {
       struct ast* firstChild = get_child(parent, 1);
-      struct ast* secondChild = get_child(parent, 1);
       if (node->id == firstChild->id)
       {
         struct br_instr* b = find_br_instr(current_bb_for_instrs, bb_root);
@@ -351,7 +351,8 @@ int fill_instrs(struct ast* node)
       }
       else 
       {
-        struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, node->id, -1);
+        int op1 = get_register_val(node);
+        struct asgn_instr *asgn = mk_uasgn(current_bb_for_instrs, parent->id, op1, -1);
         push_asgn(asgn, &asgn_root, &asgn_tail);
         current_bb_for_instrs = pop_int_front(&bb_num_root, &bb_num_tail);
       }
@@ -594,6 +595,42 @@ void get_first_instrs()
 }
 
 
+int same_branches(struct br_instr* br)
+{
+  struct asgn_instr* a1 = asgn_root, *a2 = asgn_root;
+
+  while (a1->bb != br->succ1) a1 = a1->next;
+  while (a2->bb != br->succ2) a2 = a2->next;
+
+  while (a1 != NULL && a2 != NULL)
+  {
+    if (a1->lhs != a2->lhs || a1->bin != a2->bin) return 1;
+    if (a1->bin == 0 && a1->op1 != a2->op1) return 1;
+    if (a1->bin == 1 && (a1->op1 != a2->op1 || a1->op2 != a2->op2)) return 1;
+    if (a1->bin < 2 && a1->type != a2->type) return 1;
+    if (a1->bin == 2 && strcmp(a1->fun, a2->fun) != 0) return 1;
+    a1 = a1->next; a2 = a2->next;
+    if (a1->bb != br->succ1 && a2->bb != br->succ2) return 0;
+    else if (a1->bb != br->succ1 || a2->bb != br->succ2) return 1;
+  }
+  return 0;
+}
+
+int detect_same_branches(struct br_instr* br, struct asgn_instr* asgn)
+{
+  if (br->cond != 0)
+  {
+    if (same_branches(br) == 0)
+    {
+      br->cond = 0;
+      remove_bb(asgn, br->succ2, br);
+    }
+
+  }
+  return 1;
+}
+
+
 int main (int argc, char **argv) {
   const char *opt_simplify = "--simpcfg";
   bool simp_cfg = false;
@@ -625,6 +662,10 @@ int main (int argc, char **argv) {
     struct asgn_instr* asgn = asgn_root;
     struct br_instr* br = bb_root;
     visit_instr(br, asgn, cond_to_uncond_check);
+
+    asgn = asgn_root;
+    br = bb_root;
+    visit_instr(br, asgn, detect_same_branches);
 
     asgn = asgn_root;
     br = bb_root;

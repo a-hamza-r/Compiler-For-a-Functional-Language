@@ -1,2 +1,2 @@
-(define-fun (func (int var) (bool var2) (int var10) (bool var11)) int (+ 1 (div 3 (if (if false (= 1 2) (and true false)) (* var10 2) 1))))
+(define-fun (func (int var) (bool var2) (int var10) (bool var11)) int (+ 1 (div 3 (if (if false (= 1 2) (and true false)) var10 var10))))
 (eval 0)
