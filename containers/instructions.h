@@ -34,8 +34,6 @@ void push_asgn (struct asgn_instr* i, struct asgn_instr** r, struct asgn_instr**
 void rm_asgn (struct asgn_instr* i, struct asgn_instr** r, struct asgn_instr** t);
 void clean_asgns (struct asgn_instr** r);
 
-int visit_instr(struct br_instr* br_root, struct asgn_instr* asgn,
-                int (*f)(struct asgn_instr* asgn, struct br_instr* br, int arg1, int arg2),
-                int arg1, int arg2); // arg1 or arg2 could be empty
+int visit_instr(struct br_instr* br_root, struct asgn_instr* asgn, int (*f)(struct br_instr* br, struct asgn_instr* asgn));
 
 void print_cfg(struct node_istr* ifun_r, struct br_instr* bb_root, struct asgn_instr* asgn_root);

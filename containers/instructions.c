@@ -165,9 +165,9 @@ void clean_istr(struct node_istr** r){
   }
 }
 
-int visit_instr(struct br_instr* br, struct asgn_instr* asgn,
-                int (*f)(struct asgn_instr* asgn, struct br_instr* br, int arg1, int arg2),
-                int arg1, int arg2){
+int visit_instr(struct br_instr* br, struct asgn_instr* asgn, int (*f)(struct br_instr* br, struct asgn_instr* asgn)){
+  while (f (br, asgn) == 0);
+
   // goes to the end of the function
   while (asgn != NULL){
     if (asgn->bb != br->id){
@@ -175,8 +175,8 @@ int visit_instr(struct br_instr* br, struct asgn_instr* asgn,
         return 0;
       }
       br = br->next;
+      while (f (br, asgn) == 0);
     }
-    if (f (asgn, br, arg1, arg2) != 0) return 1;
     if (asgn->bb == br->id) asgn = asgn->next;
   }
   return 0;

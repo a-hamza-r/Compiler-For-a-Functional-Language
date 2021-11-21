@@ -20,6 +20,9 @@ struct br_instr* bb_tail = NULL;
 struct asgn_instr* asgn_root = NULL;
 struct asgn_instr* asgn_tail = NULL;
 
+struct asgn_instr* first_asgns_root = NULL;
+struct asgn_instr* first_asgns_tail = NULL;
+
 struct node_istr* ifun_r = NULL;
 struct node_istr* ifun_t = NULL;
 
@@ -447,7 +450,161 @@ void print_interm(struct asgn_instr *asgn_root)
 }
 
 
+struct asgn_instr* find_asgn_in_bb(struct asgn_instr* start, int lhs, int bb)
+{
+  struct asgn_instr* asgn = start;
+  struct asgn_instr* ret_val = NULL;
+  while (asgn != NULL)
+  {
+    if (asgn->lhs == lhs && asgn->bb == bb)
+      ret_val = asgn;
+    asgn = asgn->next;
+  }
+  return ret_val;
+}
+
+
+void remove_bb(struct asgn_instr* asgn, int to_remove, struct br_instr* br)
+{
+  // TODO: corner cases like asgn's next is NULL
+  struct br_instr* temp_br = br;
+  while (temp_br != NULL)
+  {
+    if (temp_br->next != NULL && temp_br->next->id == to_remove)
+    {
+      struct br_instr* next = temp_br->next;
+      temp_br->next = next->next;
+      free(next);
+    }
+    else
+      temp_br = temp_br->next;
+  }
+  struct asgn_instr* temp = asgn;
+  while (temp != NULL)
+  {
+    if (temp->next != NULL && temp->next->bb == to_remove)
+    {
+      struct asgn_instr* next = temp->next;
+      temp->next = next->next;
+      free(next);
+    }
+    else
+      temp = temp->next;
+  }
+}
+
+
+int cond_to_uncond_check(struct br_instr* br, struct asgn_instr* asgn)
+{
+  if (br->cond != 0)
+  {
+    struct asgn_instr* cond_asgn = find_asgn_in_bb(asgn, br->cond, br->id);
+    if (cond_asgn != NULL)
+    {
+      if (cond_asgn->op1 == 1)
+      {
+        br->cond = 0;
+        remove_bb(cond_asgn, br->succ2, br);
+      }
+      else if (cond_asgn->op1 == 0)
+      {
+        br->cond = 0;
+        remove_bb(cond_asgn, br->succ1, br);
+        br->succ1 = br->succ2;
+      }
+    } 
+  }
+  return 1;
+}
+
+int count_preds(int br_id)
+{
+  int count = 0;
+  struct br_instr* br = bb_root;
+  while (br != NULL)
+  {
+    if (br->cond == 0)
+      if (br->succ1 == br_id) count++;
+    else 
+    {
+      if (br->succ1 == br_id) count++;
+      if (br->succ2 == br_id) count++;
+    }
+    br = br->next;
+  }
+  return count;
+}
+
+int merge_with_pred(struct br_instr* br, struct asgn_instr* asgn)
+{
+  if (br->cond == 0)
+  {
+    if (count_preds(br->succ1) == 1)
+    {
+      while (asgn != NULL)
+      {
+        if (asgn->bb == br->succ1)
+          asgn->bb = br->id;
+        asgn = asgn->next;
+      }
+      struct br_instr* b = bb_root;
+      while (b != NULL)
+      {
+        if (b->next != NULL && b->next->id == br->succ1)
+        {
+          struct br_instr* next = b->next;
+          br->succ1 = next->succ1;
+          br->succ2 = next->succ2;
+          br->cond = next->cond;
+          b->next = next->next;
+          free(next);
+          return 0;
+        }
+        else
+          b = b->next;
+      }
+    }
+  }
+  return 1;
+}
+
+void get_first_instrs()
+{
+  struct asgn_instr* asgn = asgn_root;
+  struct br_instr* br = bb_root;
+
+  while (asgn != NULL) 
+  {
+    if (asgn->bb != br->id)
+    {
+      br = br->next;
+      if (asgn->bb == br->id)
+      {
+        //print_asgn(asgn);
+        push_asgn(asgn, &first_asgns_root, &first_asgns_tail);
+        if (br->next == NULL)
+        {
+          first_asgns_tail->next = NULL;
+        }
+      }
+    }
+
+    if (asgn->bb == br->id) asgn = asgn->next;
+  }
+}
+
+
 int main (int argc, char **argv) {
+  const char *opt_simplify = "--simpcfg";
+  bool simp_cfg = false;
+  for (int i = 1; i < argc; i++)
+  {
+    if (strcmp(argv[i], opt_simplify) == 0) 
+    {
+      simp_cfg = true;
+      break;
+    }
+  }
   int retval = yyparse();
   if (retval != 0) return 1;
   retval = visit_ast(get_funs_and_vars);
@@ -461,10 +618,23 @@ int main (int argc, char **argv) {
   visit_ast(fill_instrs);
   print_cfg(ifun_r, bb_root, asgn_root);
   print_interm(asgn_root);
+  //get_first_instrs();
+  if (simp_cfg) 
+  {
+    printf("After applying optimizations:\n\n");
+    struct asgn_instr* asgn = asgn_root;
+    struct br_instr* br = bb_root;
+    visit_instr(br, asgn, cond_to_uncond_check);
+
+    asgn = asgn_root;
+    br = bb_root;
+    visit_instr(br, asgn, merge_with_pred);
+  }
+  print_interm(asgn_root);
+  
   clean_fun_str(&fun_r);
   clean_var_str(&var_r);
   free_ast();
-
   clean_istr(&ifun_r);
   clean_bbs(&bb_root);
   clean_asgns(&asgn_root);
