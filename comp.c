@@ -453,9 +453,9 @@ struct asgn_instr* find_asgn_in_bb(struct asgn_instr* start, int lhs, int bb)
 {
   struct asgn_instr* asgn = start;
   struct asgn_instr* ret_val = NULL;
-  while (asgn != NULL)
+  while (asgn != NULL && asgn->bb == bb)
   {
-    if (asgn->lhs == lhs && asgn->bb == bb)
+    if (asgn->lhs == lhs)
       ret_val = asgn;
     asgn = asgn->next;
   }
@@ -465,7 +465,6 @@ struct asgn_instr* find_asgn_in_bb(struct asgn_instr* start, int lhs, int bb)
 
 void remove_bb(struct asgn_instr* asgn, int to_remove, struct br_instr* br)
 {
-  // TODO: corner cases like asgn's next is NULL
   struct br_instr* temp_br = br;
   while (temp_br != NULL)
   {
@@ -497,6 +496,7 @@ int cond_to_uncond_check(struct br_instr* br, struct asgn_instr* asgn)
 {
   if (br->cond != 0)
   {
+    //printf("checking cond: bb%d v%d bb%d bb%d", br->id, br->cond, br->succ1, br->succ2);
     struct asgn_instr* cond_asgn = find_asgn_in_bb(asgn, br->cond, br->id);
     if (cond_asgn != NULL)
     {
@@ -651,9 +651,6 @@ int main (int argc, char **argv) {
   }
   visit_ast(compute_br_structure);
   visit_ast(fill_instrs);
-  print_cfg(ifun_r, bb_root, asgn_root);
-  print_interm(asgn_root);
-  //get_first_instrs();
   if (simp_cfg) 
   {
     printf("After applying optimizations:\n\n");
@@ -669,6 +666,7 @@ int main (int argc, char **argv) {
     br = bb_root;
     visit_instr(br, asgn, merge_with_pred);
   }
+  print_cfg(ifun_r, bb_root, asgn_root);
   print_interm(asgn_root);
   
   clean_fun_str(&fun_r);

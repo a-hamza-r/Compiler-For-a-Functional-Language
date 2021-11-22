@@ -7,7 +7,7 @@ do
   if [ ! -d "$f" ]; then 
     filename="$(basename -- $f)"
 	  echo "Running $f"
-	  ./comp < $f
+	  ./comp $2 < $f
     if [ "$1" = "good" ]; then 
       dot -Tpdf ast.dot -o testcases/$1/asts/$filename.pdf
       dot -Tpdf cfg.dot -o testcases/$1/cfgs/$filename.pdf

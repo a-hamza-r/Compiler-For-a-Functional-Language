@@ -171,10 +171,8 @@ int visit_instr(struct br_instr* br, struct asgn_instr* asgn, int (*f)(struct br
   // goes to the end of the function
   while (asgn != NULL){
     if (asgn->bb != br->id){
-      if (br->cond == 0 && br->succ1 == -1){
-        return 0;
-      }
       br = br->next;
+      if (br == NULL) return 0;
       while (f (br, asgn) == 0);
     }
     if (asgn->bb == br->id) asgn = asgn->next;
