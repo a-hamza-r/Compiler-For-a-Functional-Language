@@ -498,7 +498,7 @@ int cond_to_uncond_check(struct br_instr* br, struct asgn_instr* asgn)
   {
     //printf("checking cond: bb%d v%d bb%d bb%d", br->id, br->cond, br->succ1, br->succ2);
     struct asgn_instr* cond_asgn = find_asgn_in_bb(asgn, br->cond, br->id);
-    if (cond_asgn != NULL)
+    if (cond_asgn != NULL && cond_asgn->type == CONST)
     {
       if (cond_asgn->op1 == 1)
       {
