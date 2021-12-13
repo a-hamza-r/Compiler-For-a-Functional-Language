@@ -757,7 +757,7 @@ bool check_smt_file(char *str, bool get_values)
   FILE *fp;
   char command[100];
   char path[1024];
-  sprintf(command, "z3 %s", str);
+  sprintf(command, "~/seahorn-dev10/build/run/bin/z3 %s", str);
   fp = popen(command, "r");
   if (fp != NULL)
   {
@@ -971,7 +971,7 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("notq %d(%%rbp)\n", asgn->lhs);
     }
     else if (asgn->op1 < 0)
-      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1], -8*asgn->lhs);
+      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1-1], -8*asgn->lhs);
     else if (asgn->lhs == 0)
     {
       printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
@@ -979,7 +979,7 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("ret\n");
     }
     else if (asgn->lhs < 0)
-      printf("movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs]);
+      printf("movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs-1]);
     else 
       printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->lhs);
   }
