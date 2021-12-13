@@ -295,6 +295,7 @@ int fill_instrs(struct ast* node)
     }
     int lhs = node->id;
     char *tok = (node->ntoken == CALL && strcmp(node->token, "ENTRY") == 0) ? "print" : node->token;
+    tok = (node->ntoken == GETINT) ? "get_int" : tok;
     struct asgn_instr *asgn = mk_casgn(current_bb_for_instrs, lhs, tok);
     push_asgn(asgn, &asgn_root, &asgn_tail);
   }
@@ -757,7 +758,7 @@ bool check_smt_file(char *str, bool get_values)
   FILE *fp;
   char command[100];
   char path[1024];
-  sprintf(command, "z3 %s", str);
+  sprintf(command, "./z3 %s", str);
   fp = popen(command, "r");
   if (fp != NULL)
   {
