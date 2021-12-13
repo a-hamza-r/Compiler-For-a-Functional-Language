@@ -831,6 +831,11 @@ void create_smt_constraints()
     if (!check_smt_file(str, false))
     {
       registers_num = i+1;
+      if (registers_num > 7) 
+      {
+        printf("Compiler does not allow more than 7 registers\n");
+        exit(1);
+      }
       sprintf(str, "constraints_%d.smt2", registers_num);
       fp = fopen(str, "a");
       if (fp != NULL)
@@ -966,7 +971,7 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("notq %d(%%rbp)\n", asgn->lhs);
     }
     else if (asgn->op1 < 0)
-      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1], 8*asgn->lhs);
+      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1], -8*asgn->lhs);
     else if (asgn->lhs == 0)
     {
       printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
