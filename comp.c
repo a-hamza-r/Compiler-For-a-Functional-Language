@@ -966,7 +966,7 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("notq %d(%%rbp)\n", asgn->lhs);
     }
     else if (asgn->op1 < 0)
-      printf("movq %%a%d, %d(%%rbp)\n", -asgn->op1, -8*asgn->lhs);
+      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1], 8*asgn->lhs);
     else if (asgn->lhs == 0)
     {
       printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
@@ -974,9 +974,9 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("ret\n");
     }
     else if (asgn->lhs < 0)
-      printf("movq %d(%%rbp), %%a%d\n", -8*asgn->op1, -asgn->lhs);
+      printf("movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs]);
     else 
-      printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, asgn->lhs);
+      printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->lhs);
   }
   else if (asgn->bin == 1) 
   {
@@ -1021,7 +1021,7 @@ void print_x86_instructions(struct asgn_instr* asgn)
   {
     printf("call %s\n", asgn->fun);
     if (strcmp(asgn->fun, "print") != 0)
-      printf("movq %%rax, %d(%%rbp)\n", -8*asgn->lhs);
+      printf("\tmovq %%rax, %d(%%rbp)\n", 8*asgn->lhs);
   } 
 }
 
@@ -1072,14 +1072,9 @@ void print_to_x86()
 
   while (asgn != NULL){
     if (asgn->bb != br->id){
-      if (br->cond == 0){
-        if (br->succ1 == -1) {
-        }
-        else printf(".br bb%d\n\n", br->succ1);
-      }
-      else
+      if (br->cond != 0)
       {
-        printf("\tcmp $0, %%r%d", br->cond);
+        printf("\tcmp $0, %%r%d\n", br->cond);
         printf("\tje .bb%d\n", br->succ2);
         printf("\tjmp .bb%d\n", br->succ1);
       }

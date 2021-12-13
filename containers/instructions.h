@@ -45,3 +45,6 @@ int visit_instr(struct br_instr* br, struct asgn_instr* asgn, int (*f)(struct br
 void visit_instr2(struct br_instr* br, struct asgn_instr* asgn, void (*f)(struct br_instr* br, struct asgn_instr* asgn));
 
 void print_cfg(struct node_istr* ifun_r, struct br_instr* bb_root, struct asgn_instr* asgn_root);
+
+
+static const char* x86inputs[] = {"%rsi", "%rdi", "%rdx", "%rcx", "%r8", "%r9"};
