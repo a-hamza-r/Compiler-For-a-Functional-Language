@@ -960,97 +960,102 @@ void fix_variable_naming(struct br_instr* br, struct asgn_instr* asgn)
 
 void print_x86_instructions(struct asgn_instr* asgn)
 {
-  printf("\t");
-  if (asgn->bin == 0) 
+  FILE *fp = fopen("assemb.s", "a");
+  if (fp != NULL)
   {
-    if (asgn->type == CONST)
-      printf("movq $%d, %d(%%rbp)\n", asgn->op1, -8*asgn->lhs);
-    else if (asgn->type == NOT)
+    fprintf(fp, "\t");
+    if (asgn->bin == 0) 
     {
-      if (asgn->op1 != asgn->lhs)
+      if (asgn->type == CONST)
+        fprintf(fp, "movq $%d, %d(%%rbp)\n", asgn->op1, -8*asgn->lhs);
+      else if (asgn->type == NOT)
       {
-        printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
-        printf("movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
+        if (asgn->op1 != asgn->lhs)
+        {
+          fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+          fprintf(fp, "movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
+        }
+        fprintf(fp, "notq %d(%%rbp)\n", asgn->lhs);
       }
-      printf("notq %d(%%rbp)\n", asgn->lhs);
+      else if (asgn->op1 < 0)
+        fprintf(fp, "movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1-1], -8*asgn->lhs);
+      else if (asgn->lhs == 0)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rax\n", -8*asgn->op1);
+        fprintf(fp, "leave\n");
+        fprintf(fp, "ret\n");
+      }
+      else if (asgn->lhs < 0)
+        fprintf(fp, "movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs-1]);
+      else 
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+        fprintf(fp, "movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
+      }
     }
-    else if (asgn->op1 < 0)
-      printf("movq %s, %d(%%rbp)\n", x86inputs[-asgn->op1-1], -8*asgn->lhs);
-    else if (asgn->lhs == 0)
+    else if (asgn->bin == 1) 
     {
-      printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
-      printf("leave\n");
-      printf("ret\n");
+      if (asgn->type == EQUAL || asgn->type == LT || asgn->type == GT
+        || asgn->type == LE || asgn->type == GE)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+        fprintf(fp, "cmpq %%rbx, %d(%%rbp)\n", -8*asgn->op2);
+        if (asgn->type == EQUAL)
+          fprintf(fp, "\tsete %%al\n");
+        else if (asgn->type == LT)
+          fprintf(fp, "\tsetl %%al\n");
+        else if (asgn->type == LE)
+          fprintf(fp, "\tsetle %%al\n");
+        else if (asgn->type == GT)
+          fprintf(fp, "\tsetg %%al\n");
+        else if (asgn->type == GE)
+          fprintf(fp, "\tsetge %%al\n");
+        fprintf(fp, "\tmovzbl %%al, %d(%%rbp)\n", -8*asgn->lhs);
+      }
+      else if (asgn->type == PLUS)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+        fprintf(fp, "addq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+      }
+      else if (asgn->type == MULT)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+        fprintf(fp, "mulq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+      }
+      else if (asgn->type == MINUS)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+        fprintf(fp, "subq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+      }
+      else if (asgn->type == DIV || asgn->type == MOD)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rax\n", -8*asgn->op1);
+        fprintf(fp, "movq $0, %%rdx\n");
+        fprintf(fp, "divq %d(%%rbp)\n", -8*asgn->op2);
+        if (asgn->type == DIV)
+          fprintf(fp, "movq %%rax, %d(%%rbp)\n", -8*asgn->lhs);
+        else
+          fprintf(fp, "movq %%rdx, %d(%%rbp)\n", -8*asgn->lhs);
+      }
+      else if (asgn->type == LAND)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+        fprintf(fp, "andq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+      }
+      else if (asgn->type == LOR)
+      {
+        fprintf(fp, "movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+        fprintf(fp, "orq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+      }
     }
-    else if (asgn->lhs < 0)
-      printf("movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs-1]);
-    else 
+    else if (asgn->bin == 2)
     {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
-      printf("movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
-    }
+      fprintf(fp, "call %s\n", asgn->fun);
+      if (strcmp(asgn->fun, "print") != 0)
+        fprintf(fp, "\tmovq %%rax, %d(%%rbp)\n", 8*asgn->lhs);
+    } 
   }
-  else if (asgn->bin == 1) 
-  {
-    if (asgn->type == EQUAL || asgn->type == LT || asgn->type == GT
-      || asgn->type == LE || asgn->type == GE)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
-      printf("cmpq %%rbx, %d(%%rbp)\n", -8*asgn->op2);
-      if (asgn->type == EQUAL)
-        printf("\tsete %%al\n");
-      else if (asgn->type == LT)
-        printf("\tsetl %%al\n");
-      else if (asgn->type == LE)
-        printf("\tsetle %%al\n");
-      else if (asgn->type == GT)
-        printf("\tsetg %%al\n");
-      else if (asgn->type == GE)
-        printf("\tsetge %%al\n");
-      printf("\tmovzbl %%al, %d(%%rbp)\n", -8*asgn->lhs);
-    }
-    else if (asgn->type == PLUS)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
-      printf("addq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
-    }
-    else if (asgn->type == MULT)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
-      printf("mulq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
-    }
-    else if (asgn->type == MINUS)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
-      printf("subq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
-    }
-    else if (asgn->type == DIV || asgn->type == MOD)
-    {
-      printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
-      printf("movq $0, %%rdx\n");
-      printf("divq %d(%%rbp)\n", -8*asgn->op2);
-      if (asgn->type == DIV)
-        printf("movq %%rax, %d(%%rbp)\n", -8*asgn->lhs);
-      else
-        printf("movq %%rdx, %d(%%rbp)\n", -8*asgn->lhs);
-    }
-    else if (asgn->type == LAND)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
-      printf("andq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
-    }
-    else if (asgn->type == LOR)
-    {
-      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
-      printf("orq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
-    }
-  }
-  else if (asgn->bin == 2)
-  {
-    printf("call %s\n", asgn->fun);
-    if (strcmp(asgn->fun, "print") != 0)
-      printf("\tmovq %%rax, %d(%%rbp)\n", 8*asgn->lhs);
-  } 
+  fclose(fp);
 }
 
 
@@ -1061,68 +1066,79 @@ void print_to_x86()
   
   char* fun_name = find_istr(ifun_r, br->id);
 
-  printf("\t.section .rodata\n");
-  printf("msg0:\n");
-  printf("\t.string \"%%d\"\n");
-  printf("msg1:\n");
-  printf("\t.string \"%%d\\n\"\n");
-  printf("\t.text\n");
-  printf("\t.global main\n");
-  printf("\t.type main, @function\n");
+  FILE *fp = fopen("assemb.s", "w");
+  
+  if (fp != NULL)
+  {
+    fprintf(fp, "\t.section .rodata\n");
+    fprintf(fp, "msg0:\n");
+    fprintf(fp, "\t.string \"%%d\"\n");
+    fprintf(fp, "msg1:\n");
+    fprintf(fp, "\t.string \"%%d\\n\"\n");
+    fprintf(fp, "\t.text\n");
+    fprintf(fp, "\t.global main\n");
+    fprintf(fp, "\t.type main, @function\n");
 
-  printf("print:\n");
-  printf(".bbp\n");
-  printf("\tpushq %%rbp\n");
-  printf("\tmovq $msg1, %%rdi\n");
-  printf("\tcall printf\n");
-  printf("\tpopq %%rbp\n");
-  printf("\tret\n\n");
+    fprintf(fp, "print:\n");
+    fprintf(fp, ".bbp\n");
+    fprintf(fp, "\tpushq %%rbp\n");
+    fprintf(fp, "\tmovq $msg1, %%rdi\n");
+    fprintf(fp, "\tcall printf\n");
+    fprintf(fp, "\tpopq %%rbp\n");
+    fprintf(fp, "\tret\n\n");
 
-  printf("get_int:\n");
-  printf(".bbg:\n");
-  printf("\tpushq %%rbp\n");
-  printf("\tmovq %%rsp, %%rbp\n");
-  printf("\tsubq $16, %%rsp\n");
-  printf("\tleaq -8(%%rbp), %%rax\n");
-  printf("\tmovq %%rax, %%rsi\n");
-  printf("\tmovq $msg0, %%rdi\n");
-  printf("\tmovq $0, %%rax\n");
-  printf("\tcall scanf\n");
-  printf("\tmovq -8(%%rbp), %%rax\n");
-  printf("\tleave\n");
-  printf("\tret\n\n");
+    fprintf(fp, "get_int:\n");
+    fprintf(fp, ".bbg:\n");
+    fprintf(fp, "\tpushq %%rbp\n");
+    fprintf(fp, "\tmovq %%rsp, %%rbp\n");
+    fprintf(fp, "\tsubq $16, %%rsp\n");
+    fprintf(fp, "\tleaq -8(%%rbp), %%rax\n");
+    fprintf(fp, "\tmovq %%rax, %%rsi\n");
+    fprintf(fp, "\tmovq $msg0, %%rdi\n");
+    fprintf(fp, "\tmovq $0, %%rax\n");
+    fprintf(fp, "\tcall scanf\n");
+    fprintf(fp, "\tmovq -8(%%rbp), %%rax\n");
+    fprintf(fp, "\tleave\n");
+    fprintf(fp, "\tret\n\n");
 
-  printf("%s:\n", fun_name);
-  printf(".bb%d:\n", br->id);
-  printf("\tpushq %%rbp\n");
-  printf("\tmovq %%rsp, %%rbp\n");
-  printf("\tsubq $56, %%rsp\n");
+    fprintf(fp, "%s:\n", fun_name);
+    fprintf(fp, ".bb%d:\n", br->id);
+    fprintf(fp, "\tpushq %%rbp\n");
+    fprintf(fp, "\tmovq %%rsp, %%rbp\n");
+    fprintf(fp, "\tsubq $56, %%rsp\n");
 
-  while (asgn != NULL){
-    if (asgn->bb != br->id){
-      if (br->cond != 0)
-      {
-        printf("\tcmpq $0, %d(%%rbp)\n", -8*br->cond);
-        printf("\tje .bb%d\n", br->succ2);
-        printf("\tjmp .bb%d\n", br->succ1);
+    while (asgn != NULL){
+      if (asgn->bb != br->id){
+        if (br->cond != 0)
+        {
+          fprintf(fp, "\tcmpq $0, %d(%%rbp)\n", -8*br->cond);
+          fprintf(fp, "\tje .bb%d\n", br->succ2);
+          fprintf(fp, "\tjmp .bb%d\n", br->succ1);
+        }
+        br = br->next;
+        if (br == NULL) return;
+        fun_name = find_istr(ifun_r, br->id);
+        if (fun_name != NULL){
+          fprintf(fp, "%s:\n", fun_name);
+          fprintf(fp, ".bb%d:\n", br->id);
+          fprintf(fp, "\tpushq %%rbp\n");
+          fprintf(fp, "\tmovq %%rsp, %%rbp\n");
+          fprintf(fp, "\tsubq $56, %%rsp\n");
+        } else {
+          fprintf(fp, ".bb%d:\n", br->id);
+        }
       }
-      br = br->next;
-      if (br == NULL) return;
-      fun_name = find_istr(ifun_r, br->id);
-      if (fun_name != NULL){
-        printf("%s:\n", fun_name);
-        printf(".bb%d:\n", br->id);
-        printf("\tpushq %%rbp\n");
-        printf("\tmovq %%rsp, %%rbp\n");
-        printf("\tsubq $56, %%rsp\n");
-      } else {
-        printf(".bb%d:\n", br->id);
+      if (asgn->bb == br->id) {
+        fclose(fp);
+        print_x86_instructions(asgn);
+        FILE *fp = fopen("assemb.s", "a");
+        asgn = asgn->next;
       }
     }
-    if (asgn->bb == br->id) {
-      print_x86_instructions(asgn);
-      asgn = asgn->next;
-    }
+
+    fprintf(fp, "\tleave\n");
+    fprintf(fp, "\tret\n");
+    fclose(fp);
   }
 }
 
