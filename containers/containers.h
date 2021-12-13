@@ -15,7 +15,7 @@
 // basic data structure
 struct node_int { int id; struct node_int* next; };
 void push_int (int i, struct node_int** r, struct node_int** t);
-int find_int(int c, struct node_int* r);
+bool find_int(int c, struct node_int* r);
 void clean_int (struct node_int** r);
 int pop_int (struct node_int** r, struct node_int** t);
 int pop_int_front (struct node_int** r, struct node_int** t);

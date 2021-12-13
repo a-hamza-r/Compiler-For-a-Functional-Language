@@ -138,6 +138,14 @@ void push_fun_str (char* name, int type, int arity, struct node_int* argTypes, s
   }
 }
 
+bool find_int(int id, struct node_int* r){
+  while (r != NULL){
+    if (r->id == id) return true;
+    else r = r->next;
+  }
+  return false;
+}
+
 struct node_var_str* find_var_str(int loc_id, char* name, struct node_var_str* r){
   while (r != NULL){
     if (strcmp(name, r->name) == 0 &&

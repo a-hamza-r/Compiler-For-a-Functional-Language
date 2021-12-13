@@ -7,6 +7,23 @@
 
 #include "instructions.h"
 
+void push_int_array (struct node_int* i, struct node_int_array** r, struct node_int_array** t){
+  if (*r == NULL){   // If root is null - empty list
+    *r = (struct node_int_array*)malloc(sizeof(struct node_int_array)); //Create a new node a assign the root pointer tp tail
+    (*r)->id = i;
+    (*r)->next = NULL;
+    *t = *r;
+  }
+  else{
+    struct node_int_array* ptr; //Non-empty list
+    ptr = (struct node_int_array*)malloc(sizeof(struct node_int_array)); // Create a new node, put it after tail as a new node
+    ptr->id = i;
+    ptr->next = NULL;
+    (*t)->next = ptr;
+    (*t) = ptr;
+  }
+}
+
 void push_istr (int c1, char* c2, struct node_istr** r, struct node_istr** t){
   if (*r == NULL) {                          //If root node is null
     *r = (struct node_istr*)malloc(sizeof(struct node_istr)); //Create a new node
@@ -29,6 +46,36 @@ void push_istr (int c1, char* c2, struct node_istr** r, struct node_istr** t){
 char* find_istr(struct node_istr* r, int key){
   while (r != NULL){
     if (r->id1 == key) return r->id2;
+    r = r->next;
+  }
+  return NULL;
+}
+
+void push_reg_info (int id, int st, int end, int new_id, struct register_info** r, struct register_info** t){
+  if (*r == NULL) {                          //If root node is null
+    *r = (struct register_info*)malloc(sizeof(struct register_info)); //Create a new node
+    (*r)->id = id;                          
+    (*r)->st = st;                           
+    (*r)->end = end;                           
+    (*r)->new_id = new_id;                           
+    (*r)->next = NULL;                                      //set next pointer to null
+    *t = *r;                                                //Set tail pointer == root pointer
+  }
+  else {                                    //If root node is not null
+    struct register_info* ptr;
+    ptr = (struct register_info*)malloc(sizeof(struct register_info));  //Create a temporary node
+    ptr->id = id;                          
+    ptr->st = st;                           
+    ptr->end = end;                           
+    ptr->new_id = new_id; 
+    (*t)->next = ptr;                                         //Set the node after tail
+    *t = ptr;                                                 //Set tail as the new pointer
+  }
+}
+
+struct register_info* find_reg_info(struct register_info* r, int key){
+  while (r != NULL){
+    if (r->id == key) return r;
     r = r->next;
   }
   return NULL;
@@ -83,6 +130,7 @@ struct asgn_instr* mk_asgn(int bb, int lhs, int bin, int op1, int op2, int type)
   tmp->op1 = op1;
   tmp->op2 = op2;
   tmp->type = type;
+  tmp->num = -1;
   tmp->next = NULL;
   return tmp;
 }
@@ -95,6 +143,7 @@ struct asgn_instr* mk_basgn(int bb, int lhs, int op1, int op2, int type){
   tmp->op1 = op1;
   tmp->op2 = op2;
   tmp->type = type;
+  tmp->num = -1;
   tmp->next = NULL;
   return tmp;
 }
@@ -107,6 +156,7 @@ struct asgn_instr* mk_uasgn(int bb, int lhs, int op, int type){
   tmp->op1 = op;
   tmp->op2 = -1;
   tmp->type = type;
+  tmp->num = -1;
   tmp->next = NULL;
   return tmp;
 }
@@ -178,6 +228,21 @@ int visit_instr(struct br_instr* br, struct asgn_instr* asgn, int (*f)(struct br
     if (asgn->bb == br->id) asgn = asgn->next;
   }
   return 0;
+}
+
+void visit_instr2(struct br_instr* br, struct asgn_instr* asgn, void (*f)(struct br_instr* br, struct asgn_instr* asgn))
+{
+  while (asgn != NULL){
+    if (asgn->bb != br->id){
+      br = br->next;
+      if (br == NULL) return;
+    }
+    if (asgn->bb == br->id) 
+    {
+      f(br, asgn);
+      asgn = asgn->next;
+    }
+  }
 }
 
 void print_cfg(struct node_istr* ifun_r, struct br_instr* bb_root, struct asgn_instr* asgn_root) {

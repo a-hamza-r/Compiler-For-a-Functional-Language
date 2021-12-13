@@ -29,9 +29,21 @@ struct node_istr* ifun_t = NULL;
 struct node_int* bb_num_root = NULL;
 struct node_int* bb_num_tail = NULL;
 
+struct register_info* reg_info_r = NULL;
+struct register_info* reg_info_t = NULL;
+
+struct node_int_array* non_interf_vars_r = NULL;
+struct node_int_array* non_interf_vars_t = NULL;
+
+struct node_int* all_regs_r = NULL;
+struct node_int* all_regs_t = NULL;
+
 int current_bb = 0;
 int current_bb_for_instrs = -1;
 bool foundEntry = false;
+
+int counter = 0;
+int registers_num = 0;
 
 // get function and variable declarations
 int get_funs_and_vars(struct ast* node)
@@ -180,7 +192,7 @@ int compute_br_structure(struct ast* node)
   if (node->ntoken == FUNID || (node->ntoken == CALL && strcmp(node->token, "ENTRY") == 0))
   {
     struct ast* parent = node->parent;
-    char *istr = node->ntoken == FUNID ? node->token : "print";
+    char *istr = node->ntoken == FUNID ? node->token : "main";
     // create a new CFG, with entry and exit
     push_istr(current_bb, istr, &ifun_r, &ifun_t);
     push_int(current_bb, &bb_num_root, &bb_num_tail);
@@ -362,53 +374,54 @@ int fill_instrs(struct ast* node)
 
 void print_asgn(struct asgn_instr *asgn)
 {
+  if (asgn->num >= 0) printf("#%d: ", asgn->num);
   if (asgn->bin == 0) 
   {
     if (asgn->type == CONST)
-      printf("v%d := %d\n", asgn->lhs, asgn->op1);
+      printf("r%d := %d\n", asgn->lhs, asgn->op1);
     else if (asgn->type == NOT)
-      printf("v%d := not v%d\n", asgn->lhs, asgn->op1);
+      printf("r%d := not r%d\n", asgn->lhs, asgn->op1);
     else if (asgn->op1 < 0)
-      printf("v%d := a%d\n", asgn->lhs, -asgn->op1);
+      printf("r%d := a%d\n", asgn->lhs, -asgn->op1);
     else if (asgn->lhs == 0)
-      printf("rv := v%d\n", asgn->op1);
+      printf("rv := r%d\n", asgn->op1);
     else if (asgn->lhs < 0)
-      printf("a%d := v%d\n", -asgn->lhs, asgn->op1);
+      printf("a%d := r%d\n", -asgn->lhs, asgn->op1);
     else 
-      printf("v%d := v%d\n", asgn->lhs, asgn->op1);
+      printf("r%d := r%d\n", asgn->lhs, asgn->op1);
   }
   else if (asgn->bin == 1) 
   {
     if (asgn->type == EQUAL)
-      printf("v%d := v%d = v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d = r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == PLUS)
-      printf("v%d := v%d + v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d + r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == MULT)
-      printf("v%d := v%d * v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d * r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == MINUS)
-      printf("v%d := v%d - v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d - r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == DIV)
-      printf("v%d := v%d / v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d / r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == MOD)
-      printf("v%d := v%d mod v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d mod r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == LT)
-      printf("v%d := v%d < v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d < r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == GT)
-      printf("v%d := v%d > v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d > r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == LE)
-      printf("v%d := v%d <= v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d <= r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == GE)
-      printf("v%d := v%d >= v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d >= r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == LAND)
-      printf("v%d := v%d && v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d && r%d\n", asgn->lhs, asgn->op1, asgn->op2);
     else if (asgn->type == LOR)
-      printf("v%d := v%d || v%d\n", asgn->lhs, asgn->op1, asgn->op2);
+      printf("r%d := r%d || r%d\n", asgn->lhs, asgn->op1, asgn->op2);
   }
   else if (asgn->bin == 2)
   {
     printf("call %s\n", asgn->fun);
     if (strcmp(asgn->fun, "print") != 0)
-      printf("v%d := rv\n", asgn->lhs);
+      printf("r%d := rv\n", asgn->lhs);
   }
 }
 
@@ -629,6 +642,467 @@ int detect_same_branches(struct br_instr* br, struct asgn_instr* asgn)
 }
 
 
+void compute_line_number(struct br_instr* br, struct asgn_instr* asgn)
+{
+  asgn->num = counter++;
+}
+
+void compute_live_range(struct br_instr* br, struct asgn_instr* asgn)
+{
+  if ((asgn->bin == 0 && asgn->lhs > 0) || asgn->bin > 0)
+  {
+    if (!find_int(asgn->lhs, all_regs_r)) push_int(asgn->lhs, &all_regs_r, &all_regs_t);
+    int last_end_val = -1;
+    struct register_info* r = find_reg_info(reg_info_r, asgn->lhs);
+    struct asgn_instr* a = asgn;
+    struct br_instr* b = br;
+    while (a != NULL)
+    {
+      if (a->bb != b->id)
+      {
+        if (b->cond == 0 && b->succ1 == -1)
+          break;
+        b = b->next;
+      }
+      else 
+      {
+        if (a->type != CONST && (a->op1 == asgn->lhs || a->op2 == asgn->lhs))
+          last_end_val = a->num;
+        a = a->next;
+      }
+    }
+    
+    int end_val = last_end_val == -1 ? asgn->num : last_end_val;
+    if (r == NULL) push_reg_info(asgn->lhs, asgn->num, end_val, -1, &reg_info_r, &reg_info_t);
+    else r->end = end_val;
+    //printf("range of v%d is [%d - %d]\n", asgn->lhs, asgn->num, end_val);
+  }
+}
+
+
+
+void registers_live_at(int line_num)
+{
+  struct node_int* live_regs_r = NULL;
+  struct node_int* live_regs_t = NULL;
+
+  struct register_info* reg = reg_info_r; 
+
+  while (reg != NULL)
+  {
+    //printf("v%d has start end: %d, %d\n", reg->id, reg->st, reg->end);
+    if (reg->st <= line_num && line_num < reg->end)
+      push_int(reg->id, &live_regs_r, &live_regs_t);
+    reg = reg->next;
+  }
+
+  /*
+  printf("registers live at line %d are: ", line_num);
+  struct node_int* n = live_regs_r;
+  while (n != NULL)
+  {
+    printf("v%d ", n->id);
+    n = n->next;
+  }
+  printf("\n");
+  */
+
+  struct node_int* live_regs = live_regs_r;
+  while (live_regs != NULL)
+  {
+    struct node_int* live_regs_next = live_regs->next;
+    while (live_regs_next != NULL)
+    {
+      struct node_int* p_r = NULL;
+      struct node_int* p_t = NULL;
+      push_int(live_regs->id, &p_r, &p_t);
+      push_int(live_regs_next->id, &p_r, &p_t);
+
+      push_int_array(p_r, &non_interf_vars_r, &non_interf_vars_t);
+      live_regs_next = live_regs_next->next;
+    }
+    live_regs = live_regs->next;
+  }
+}
+
+
+void interference_graph()
+{
+  struct asgn_instr* asgn = asgn_root;
+  struct br_instr* br = bb_root;
+ 
+  for (int i = 0; i < counter; i++)
+  {
+    registers_live_at(i);
+  }
+  /*
+  struct node_int_array* r = non_interf_vars_r;
+  while (r != NULL)
+  {
+    struct node_int* r1 = r->id;
+    while (r1 != NULL)
+    {
+      printf("%d ", r1->id);
+      r1 = r1->next;
+    }
+    printf("\n");
+    r = r->next;
+  }
+  */
+}
+
+
+bool check_smt_file(char *str, bool get_values)
+{
+  FILE *fp;
+  char command[100];
+  char path[1024];
+  sprintf(command, "~/seahorn-dev10/build/run/bin/z3 %s", str);
+  fp = popen(command, "r");
+  if (fp != NULL)
+  {
+    fgets(path, sizeof(path), fp);
+    if (!get_values)
+    {
+      pclose(fp);
+      char parsed[4];
+      memcpy(parsed, path, 3);
+      if (strcmp(parsed, "sat") == 0) return true;
+      else return false;
+    }
+    struct node_int* all_regs = all_regs_r;
+    while (fgets(path, sizeof(path), fp) != NULL) 
+    {
+      struct register_info* reg_info = find_reg_info(reg_info_r, all_regs->id);
+      if (reg_info != NULL) reg_info->new_id = atoi(path);
+      all_regs = all_regs->next;
+    }
+  }
+  pclose(fp);
+  return true;
+}
+
+
+void create_smt_constraints()
+{
+  int threshhold = 10;
+  FILE *fp;
+  int i = threshhold;
+  while (i > 0)
+  {
+    struct node_int_array* arr = non_interf_vars_r;
+    char str[20];
+    sprintf(str, "constraints_%d.smt2", i);
+    fp = fopen(str, "w");
+    printf("\n");
+    if (fp != NULL)
+    {
+      struct node_int* all_regs = all_regs_r;
+      while (all_regs != NULL)
+      {
+        fprintf(fp, "(declare-var v%d Int)\n", all_regs->id);
+        all_regs = all_regs->next;
+      }
+      fprintf(fp, "\n");
+      while (arr != NULL)
+      {
+        struct node_int* n = arr->id;
+        fprintf(fp, "(assert (not (=");
+        while (n != NULL)
+        {
+          fprintf(fp, " v%d", n->id);
+          n = n->next;
+        }
+        fprintf(fp, ")))\n");
+        arr = arr->next;
+      }
+
+      all_regs = all_regs_r;
+      fprintf(fp, "\n");
+      while (all_regs != NULL)
+      {
+        fprintf(fp, "(assert (and (> v%d 0) (<= v%d %d)))\n", all_regs->id, all_regs->id, i);
+        all_regs = all_regs->next;
+      }
+      fprintf(fp, "\n(check-sat)\n");
+    }
+    fclose(fp);
+
+    if (!check_smt_file(str, false))
+    {
+      registers_num = i+1;
+      sprintf(str, "constraints_%d.smt2", registers_num);
+      fp = fopen(str, "a");
+      if (fp != NULL)
+      {
+        struct node_int* all_regs = all_regs_r;
+        while (all_regs != NULL)
+        {
+          fprintf(fp, "(eval v%d)\n", all_regs->id);
+          all_regs = all_regs->next;
+        }
+      }
+      fclose(fp);
+      check_smt_file(str, true);
+      return;
+    }
+    i--;
+  }
+}
+
+
+void replace_variables(struct br_instr* br, struct asgn_instr* asgn)
+{ 
+  if (asgn->bin == 0)
+  {
+    if (asgn->lhs > 0) 
+    {
+      struct register_info* reg = find_reg_info(reg_info_r, asgn->lhs);
+      if (reg != NULL) asgn->lhs = reg->new_id;
+    }
+    if (asgn->type != CONST && asgn->op1 >= 0)
+    {
+      struct register_info* reg = find_reg_info(reg_info_r, asgn->op1);
+      if (reg != NULL) asgn->op1 = reg->new_id;
+    }
+  }
+  else if (asgn->bin == 1)
+  {
+    struct register_info* reg = find_reg_info(reg_info_r, asgn->lhs); 
+    if (reg != NULL) asgn->lhs = reg->new_id;
+    reg = find_reg_info(reg_info_r, asgn->op1); 
+    if (reg != NULL) asgn->op1 = reg->new_id;
+    reg = find_reg_info(reg_info_r, asgn->op2); 
+    if (reg != NULL) asgn->op2 = reg->new_id;
+  }
+  else 
+  {
+    if (strcmp(asgn->fun, "main") != 0)
+    {
+      struct register_info* reg = find_reg_info(reg_info_r, asgn->lhs); 
+      if (reg != NULL) asgn->lhs = reg->new_id;
+    }
+  }
+}
+
+
+void fix_variable_naming(struct br_instr* br, struct asgn_instr* asgn)
+{
+  struct asgn_instr* asgn_next = asgn->next;
+  if (asgn_next == NULL) return;
+  if (asgn_next->bin == 1)
+  {
+    if (asgn_next->lhs != asgn_next->op1)
+    {
+      if (asgn_next->lhs == asgn_next->op2)
+      {
+        int reg_to_use = -1;
+        for (int i = 1; i <= registers_num; i++)
+        {
+          bool found = false;
+          struct asgn_instr* a = asgn_next;
+          while (true)
+          {
+            if (a->op1 == i || a->op2 == i) break;
+            if (a->lhs == i) 
+            {
+              found = true;
+              break;
+            }
+            a = a->next;
+          }
+          if (found) 
+          {
+            reg_to_use = i;
+            break;
+          }
+        }
+        if (reg_to_use > 0) 
+        {
+          struct asgn_instr* a = mk_uasgn(asgn_next->bb, reg_to_use, asgn_next->op1, -1);
+          a->next = asgn_next;
+          asgn->next = a;
+          asgn = asgn->next;
+
+          a = mk_uasgn(asgn_next->bb, asgn_next->op1, asgn_next->op2, -1);
+          a->next = asgn_next;
+          asgn->next = a;
+          asgn = asgn->next;
+
+          a = mk_uasgn(asgn_next->bb, asgn_next->op2, reg_to_use, -1);
+          a->next = asgn_next;
+          asgn->next = a;
+          asgn = asgn->next;
+          
+          int tmp = asgn_next->op1;
+          asgn_next->op1 = asgn_next->op2;
+          asgn_next->op2 = tmp;
+        }
+        else printf("DIDN'T WORK\n");
+      }
+      else 
+      {
+        struct asgn_instr* a = mk_uasgn(asgn_next->bb, asgn_next->lhs, asgn_next->op1, -1);
+        a->next = asgn_next;
+        asgn->next = a;
+        asgn_next->op1 = asgn_next->lhs;
+      }
+    }
+  }
+}
+
+
+void print_x86_instructions(struct asgn_instr* asgn)
+{
+  printf("\t");
+  if (asgn->bin == 0) 
+  {
+    if (asgn->type == CONST)
+      printf("movq $%d, %d(%%rbp)\n", asgn->op1, -8*asgn->lhs);
+    else if (asgn->type == NOT)
+    {
+      if (asgn->op1 != asgn->lhs)
+        printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->lhs);
+      printf("notq %d(%%rbp)\n", asgn->lhs);
+    }
+    else if (asgn->op1 < 0)
+      printf("movq %%a%d, %d(%%rbp)\n", -asgn->op1, -8*asgn->lhs);
+    else if (asgn->lhs == 0)
+    {
+      printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
+      printf("leave\n");
+      printf("ret\n");
+    }
+    else if (asgn->lhs < 0)
+      printf("movq %d(%%rbp), %%a%d\n", -8*asgn->op1, -asgn->lhs);
+    else 
+      printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, asgn->lhs);
+  }
+  else if (asgn->bin == 1) 
+  {
+    if (asgn->type == EQUAL || asgn->type == LT || asgn->type == GT
+      || asgn->type == LE || asgn->type == GE)
+    {
+      printf("cmpq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->op2);
+      if (asgn->type == EQUAL)
+        printf("\tsete %%al\n");
+      else if (asgn->type == LT)
+        printf("\tsetl %%al\n");
+      else if (asgn->type == LE)
+        printf("\tsetle %%al\n");
+      else if (asgn->type == GT)
+        printf("\tsetg %%al\n");
+      else if (asgn->type == GE)
+        printf("\tsetge %%al\n");
+      printf("\tmovzbl %%al, %d(%%rbp)\n", -8*asgn->lhs);
+    }
+    else if (asgn->type == PLUS)
+      printf("addq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    else if (asgn->type == MULT)
+      printf("mulq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    else if (asgn->type == MINUS)
+      printf("subq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    else if (asgn->type == DIV || asgn->type == MOD)
+    {
+      printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
+      printf("movq $0, %%rdx\n");
+      printf("divq %d(%%rbp)\n", -8*asgn->op2);
+      if (asgn->type == DIV)
+        printf("movq %%rax, %d(%%rbp)\n", -8*asgn->lhs);
+      else
+        printf("movq %%rdx, %d(%%rbp)\n", -8*asgn->lhs);
+    }
+    else if (asgn->type == LAND)
+      printf("andq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    else if (asgn->type == LOR)
+      printf("orq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+  }
+  else if (asgn->bin == 2)
+  {
+    printf("call %s\n", asgn->fun);
+    if (strcmp(asgn->fun, "print") != 0)
+      printf("movq %%rax, %d(%%rbp)\n", -8*asgn->lhs);
+  } 
+}
+
+
+void print_to_x86()
+{
+  struct asgn_instr* asgn = asgn_root;
+  struct br_instr* br = bb_root;
+  
+  char* fun_name = find_istr(ifun_r, br->id);
+
+  printf("\t.section .rodata\n");
+  printf("msg0:\n");
+  printf("\t.string \"%%d\"\n");
+  printf("msg1:\n");
+  printf("\t.string \"%%d\\n\"\n");
+  printf("\t.text\n");
+  printf("\t.global main\n");
+  printf("\t.type main, @function\n");
+
+  printf("print:\n");
+  printf(".bbp\n");
+  printf("\tpushq %%rbp\n");
+  printf("\tmovq $msg1, %%rdi\n");
+  printf("\tcall printf\n");
+  printf("\tpopq %%rbp\n");
+  printf("\tret\n\n");
+
+  printf("get_int:\n");
+  printf(".bbg:\n");
+  printf("\tpusbq %%rbp\n");
+  printf("\tmovq %%rsp, %%rbp\n");
+  printf("\tsubq $16, %%rsp\n");
+  printf("\tleaq -8(%%rbp), %%rax\n");
+  printf("\tmovq %%rax, %%rsi\n");
+  printf("\tmovq $msg0, %%rdi\n");
+  printf("\tmovq $0, %%rax\n");
+  printf("\tcall scanf\n");
+  printf("\tmovq -8(%%rbp), %%rax\n");
+  printf("\tleave\n");
+  printf("\tret\n\n");
+
+  printf("%s:\n", fun_name);
+  printf(".bb%d:\n", br->id);
+  printf("\tpushq %%rbp\n");
+  printf("\tmovq %%rsp, %%rbp\n");
+  printf("\tsubq $56, %%rsp\n");
+
+  while (asgn != NULL){
+    if (asgn->bb != br->id){
+      if (br->cond == 0){
+        if (br->succ1 == -1) {
+        }
+        else printf(".br bb%d\n\n", br->succ1);
+      }
+      else
+      {
+        printf("\tcmp $0, %%r%d", br->cond);
+        printf("\tje .bb%d\n", br->succ2);
+        printf("\tjmp .bb%d\n", br->succ1);
+      }
+      br = br->next;
+      if (br == NULL) return;
+      fun_name = find_istr(ifun_r, br->id);
+      if (fun_name != NULL){
+        printf("%s:\n", fun_name);
+        printf(".bb%d:\n", br->id);
+        printf("\tpushq %%rbp\n");
+        printf("\tmovq %%rsp, %%rbp\n");
+        printf("\tsubq $56, %%rsp\n");
+      } else {
+        printf(".bb%d:\n", br->id);
+      }
+    }
+    if (asgn->bb == br->id) {
+      print_x86_instructions(asgn);
+      asgn = asgn->next;
+    }
+  }
+}
+
 int main (int argc, char **argv) {
   const char *opt_simplify = "--simpcfg";
   bool simp_cfg = false;
@@ -651,11 +1125,12 @@ int main (int argc, char **argv) {
   }
   visit_ast(compute_br_structure);
   visit_ast(fill_instrs);
+  /*
+  struct asgn_instr* asgn = asgn_root;
+  struct br_instr* br = bb_root;
   if (simp_cfg) 
   {
     printf("After applying optimizations:\n\n");
-    struct asgn_instr* asgn = asgn_root;
-    struct br_instr* br = bb_root;
     visit_instr(br, asgn, cond_to_uncond_check);
 
     asgn = asgn_root;
@@ -666,8 +1141,17 @@ int main (int argc, char **argv) {
     br = bb_root;
     visit_instr(br, asgn, merge_with_pred);
   }
+  */
+  visit_instr2(bb_root, asgn_root, compute_line_number);
+  visit_instr2(bb_root, asgn_root, compute_live_range);
+  pop_int(&all_regs_r, &all_regs_t);
+  interference_graph();
+  create_smt_constraints();
+  visit_instr2(bb_root, asgn_root, replace_variables);
+  visit_instr2(bb_root, asgn_root, fix_variable_naming);
+  print_to_x86();
   print_cfg(ifun_r, bb_root, asgn_root);
-  print_interm(asgn_root);
+  //print_interm(asgn_root);
   
   clean_fun_str(&fun_r);
   clean_var_str(&var_r);
