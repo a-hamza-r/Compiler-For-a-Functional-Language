@@ -1080,7 +1080,7 @@ void print_to_x86()
     fprintf(fp, "\t.type main, @function\n");
 
     fprintf(fp, "print:\n");
-    fprintf(fp, ".bbp\n");
+    fprintf(fp, ".bbp:\n");
     fprintf(fp, "\tpushq %%rbp\n");
     fprintf(fp, "\tmovq $msg1, %%rdi\n");
     fprintf(fp, "\tcall printf\n");
