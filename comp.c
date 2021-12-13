@@ -967,7 +967,10 @@ void print_x86_instructions(struct asgn_instr* asgn)
     else if (asgn->type == NOT)
     {
       if (asgn->op1 != asgn->lhs)
-        printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->lhs);
+      {
+        printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+        printf("movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
+      }
       printf("notq %d(%%rbp)\n", asgn->lhs);
     }
     else if (asgn->op1 < 0)
@@ -981,14 +984,18 @@ void print_x86_instructions(struct asgn_instr* asgn)
     else if (asgn->lhs < 0)
       printf("movq %d(%%rbp), %s\n", -8*asgn->op1, x86inputs[-asgn->lhs-1]);
     else 
-      printf("movq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->lhs);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+      printf("movq %%rbx, %d(%%rbp)\n", -8*asgn->lhs);
+    }
   }
   else if (asgn->bin == 1) 
   {
     if (asgn->type == EQUAL || asgn->type == LT || asgn->type == GT
       || asgn->type == LE || asgn->type == GE)
     {
-      printf("cmpq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op1, -8*asgn->op2);
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op1);
+      printf("cmpq %%rbx, %d(%%rbp)\n", -8*asgn->op2);
       if (asgn->type == EQUAL)
         printf("\tsete %%al\n");
       else if (asgn->type == LT)
@@ -1002,11 +1009,20 @@ void print_x86_instructions(struct asgn_instr* asgn)
       printf("\tmovzbl %%al, %d(%%rbp)\n", -8*asgn->lhs);
     }
     else if (asgn->type == PLUS)
-      printf("addq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+      printf("addq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+    }
     else if (asgn->type == MULT)
-      printf("mulq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+      printf("mulq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+    }
     else if (asgn->type == MINUS)
-      printf("subq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+      printf("subq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+    }
     else if (asgn->type == DIV || asgn->type == MOD)
     {
       printf("movq %d(%%rbp), %%rax\n", -8*asgn->op1);
@@ -1018,9 +1034,15 @@ void print_x86_instructions(struct asgn_instr* asgn)
         printf("movq %%rdx, %d(%%rbp)\n", -8*asgn->lhs);
     }
     else if (asgn->type == LAND)
-      printf("andq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+      printf("andq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+    }
     else if (asgn->type == LOR)
-      printf("orq %d(%%rbp), %d(%%rbp)\n", -8*asgn->op2, -8*asgn->op1);
+    {
+      printf("movq %d(%%rbp), %%rbx\n", -8*asgn->op2);
+      printf("orq %%rbx, %d(%%rbp)\n", -8*asgn->op1);
+    }
   }
   else if (asgn->bin == 2)
   {
@@ -1057,7 +1079,7 @@ void print_to_x86()
 
   printf("get_int:\n");
   printf(".bbg:\n");
-  printf("\tpusbq %%rbp\n");
+  printf("\tpushq %%rbp\n");
   printf("\tmovq %%rsp, %%rbp\n");
   printf("\tsubq $16, %%rsp\n");
   printf("\tleaq -8(%%rbp), %%rax\n");
@@ -1079,7 +1101,7 @@ void print_to_x86()
     if (asgn->bb != br->id){
       if (br->cond != 0)
       {
-        printf("\tcmp $0, %%r%d\n", br->cond);
+        printf("\tcmpq $0, %d(%%rbp)\n", -8*br->cond);
         printf("\tje .bb%d\n", br->succ2);
         printf("\tjmp .bb%d\n", br->succ1);
       }
