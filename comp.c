@@ -757,7 +757,7 @@ bool check_smt_file(char *str, bool get_values)
   FILE *fp;
   char command[100];
   char path[1024];
-  sprintf(command, "~/seahorn-dev10/build/run/bin/z3 %s", str);
+  sprintf(command, "z3 %s", str);
   fp = popen(command, "r");
   if (fp != NULL)
   {
