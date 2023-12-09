@@ -1,0 +1,2 @@
+; comments should be ignored
+(eval (get-bool))

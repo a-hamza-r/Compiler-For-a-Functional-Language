@@ -1,1 +1,1 @@
-(eval (let (var01var 11) var01var))
+(eval (let (var01var 11) (= 0 (- 11 var01var))))

@@ -1,4 +1,4 @@
-(define-fun (f (int b) (int i)) int
- (if (= i b) (get-int) (+ i 8)))
+(define-fun (f (int b) (int i)) bool
+ (if (= i b) (get-bool) (> i 8)))
 ; comments should be ignored
 (eval (f (get-int) (get-int)))

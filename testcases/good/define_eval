@@ -1,5 +1,5 @@
-(define-fun (varfun (int var) (bool var2) (int var3)) int (+ var var3))
+(define-fun (varfun (int var) (bool var2) (int var3)) bool (and (= var var3) (or (> var3 1) var2)))
 (define-fun (varfun2 (bool var) (bool var2) (int var3)) bool (= 1 (div 3 (if var (* var3 2) 1))))
-(define-fun (func (int var) (bool var2) (int var10) (bool var11)) int (+ 1 (div 3 (if var2 (* var10 2) 1))))
+(define-fun (func (int var) (bool var2) (int var10) (bool var11)) int (+ 1 (div 3 (if (if true (= 1 2) (and true false)) (* var10 2) 1))))
 ; (eval (f))
 (eval (let (aa 100) (varfun (+ 1 2 aa) (varfun2 (let (a (+ 3 aa)) (= a 2)) (= 1 (if (let (v false) (and v true (= 1 2))) (let (v1 (+ 1 aa)) (let (v7 aa) (+ v7 v1 (let (v2 (get-int)) v2)))) (let (v4 true) (func 1 v4 123 true)))) (+ 1 2)) (* 1 (+ aa 2 4) aa))))

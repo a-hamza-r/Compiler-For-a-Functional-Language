@@ -1,1 +1,1 @@
-(eval (let (var123var (+ 1 (get-int))) (if (= 2 var123var) (get-int) (+ (let (var234 1) (div 1 2)) (- 1 2)))))
+(eval (let (var123var (+ 1 (get-int))) (if (= 2 var123var) (get-bool) (= (let (var234 1) (div 1 2)) (- 1 2)))))
