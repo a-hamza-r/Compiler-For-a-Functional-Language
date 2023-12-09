@@ -1,4 +1,4 @@
-
+testcases/good/asts/
 *.png
 *.out
 y.tab.c
@@ -6,4 +6,4 @@ y.tab.h
 lex.yy.c
 comp
 *.dot
-tags
+.tags
